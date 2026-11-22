@@ -90,6 +90,10 @@ test("bulk add lines", () => {
 });
 test("scanner text: card codes for each game", () => {
   eq(L.parseCardText("NO. 0025 ... Mews 025/165 ® energy").num, "025");
+  // the scanner must agree with the name, forgiving small misreads
+  eq(L.nameMatch("Pidove", ["Pidovc", "Growl"]), true);
+  eq(L.nameMatch("Caterpie", ["Pidove", "Growl"]), false);
+  eq(L.parseCardText("Pid0ve 40 HP 11/12").words.includes("Pidove"), true);
   eq(L.parseCardText("NO. 0025 ... Mews 025/165 ® energy").total, "165");
   eq(L.parseCardText("Disney Lorcana 125/204 + EN + 11 Oisney").lorSet, "11");
   eq(L.parseCardText("Disney Lorcana 207/204 • EN • 1").lorNum, "207");

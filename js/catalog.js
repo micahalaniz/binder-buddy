@@ -55,6 +55,12 @@ async function pokemonSets() {
 }
 const pkSetOf = id => id.slice(0, id.lastIndexOf("-"));
 /** Pokémon sets whose printed card count matches, newest first (for "025/165" style codes). */
+/** Every card in a Pokémon set: [{id, localId, name}]. Kept for a day. */
+const pkSetCards = new Map();
+export async function pokemonSetCards(setId) {
+  if (!pkSetCards.has(setId)) pkSetCards.set(setId, getJSON(`${TCGDEX}/sets/${encodeURIComponent(setId)}`).then(s => (s && s.cards) || []).catch(e => { pkSetCards.delete(setId); throw e; }));
+  return pkSetCards.get(setId);
+}
 export async function pokemonSetsByTotal(total) {
   const sets = await pokemonSets(), t = +String(total).replace(/\D/g, "");
   return [...sets.values()].filter(s => +s.official === t).sort((a, b) => b.order - a.order);

@@ -37,7 +37,7 @@ $("sc-file").addEventListener("change", async e => {
   const [r, c] = LAYOUTS[layout];
   try {
     await scanPhoto(file, [r, c], game, (i, total, res) => {
-      rows.push({res, sel: res.candidates.length ? 0 : -1, skip: false, top: res.candidates[0] || null, searched: false});
+      rows.push({res, sel: res.candidates.length && (res.exact || res.remembered) ? 0 : -1, skip: false, top: res.candidates[0] || null, searched: false});
       $("sc-bar").style.width = Math.round((i + 1) / total * 100) + "%";
       $("sc-status").innerHTML = i + 1 < total ? `<span class="spin"></span> Reading card ${i + 2} of ${total}…` : "Done! Check each match, then add.";
       drawRows();
@@ -52,7 +52,7 @@ $("sc-file").addEventListener("change", async e => {
 function drawRows() {
   $("sc-rows").innerHTML = rows.map((row, i) => {
     const {res} = row;
-    const head = !res.candidates.length ? "Couldn't read this one." : res.remembered === "you" ? "Remembered from your fix ✓" : res.remembered ? "Fixed by a checked report ✓" : res.exact ? "Found it by the card code ✓" : "Best guesses. Pick the right one";
+    const head = !res.candidates.length ? "Couldn't read this one." : res.remembered === "you" ? "Remembered from your fix ✓" : res.remembered ? "Fixed by a checked report ✓" : res.exact ? "Found it by the card code ✓" : "Not sure. Tap the right card (or Search)";
     return `<div class="scanrow" data-r="${i}"><img src="${res.thumb}" alt="Scanned card ${i + 1}">
       <div><div class="note" style="margin-bottom:6px">${row.skip ? "Skipped" : esc(head)}</div>
       ${row.skip ? "" : `<div class="cands">${res.candidates.map((c, k) => `<button type="button" class="cand ${row.sel === k ? "on" : ""}" data-k="${k}" aria-pressed="${row.sel === k}">

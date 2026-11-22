@@ -183,12 +183,33 @@ export function parseCardText(text) {
   const pk = t.match(/\b([A-Z]{0,3}\d{1,3})\s*\/\s*([A-Z]{0,3}\d{2,3})\b/i);
   if (pk) { out.num = pk[1].toUpperCase(); out.total = pk[2].toUpperCase(); }
   // Name guesses: words of letters, longest runs first
-  out.words = [...new Set((t.match(/[A-Za-zÀ-ÿ'’.\-]{3,}(?: [A-Za-zÀ-ÿ'’.\-]{2,}){0,2}/g) || [])
+  // a 0, 1 or 5 between letters is a misread o, l or s ("Pid0ve" → "Pidove")
+  const tw = t.replace(/(?<=[A-Za-z])[015](?=[a-z])/g, d => ({0: "o", 1: "l", 5: "s"})[d]);
+  out.words = [...new Set((tw.match(/[A-Za-zÀ-ÿ'’.\-]{3,}(?: [A-Za-zÀ-ÿ'’.\-]{2,}){0,2}/g) || [])
     .map(w => w.trim()).filter(w => !/^(HP|EN|Basic|Stage|Weakness|Resistance|Retreat|Illus|Pokemon|Pokémon|Trainer|Energy|Ability)$/i.test(w)))].slice(0, 8);
   return out;
 }
 
 export const normNum = s => String(s || "").replace(/^0+(?=\d)/, "").toUpperCase();
+
+const letters = s => String(s || "").toLowerCase().normalize("NFD").replace(/[^a-z]/g, "");
+function editDist(a, b) {
+  let prev = Array.from({length: b.length + 1}, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+/** Did the scanner read this card's name? Forgives small misreads ("Pid0ve", "Pidovc"). */
+export function nameMatch(name, words) {
+  const parts = String(name || "").split(/[\s\-]+/).map(letters).filter(x => x.length >= 4 && !/^(mega|dark|light|shining|radiant|team|rocket)$/.test(x));
+  if (!parts.length) return false;
+  const ws = (words || []).flatMap(w => String(w).split(/\s+/)).map(letters).filter(x => x.length >= 3);
+  return parts.some(p => ws.some(w => w.includes(p) || (w.length >= 4 && p.includes(w) && w.length >= p.length - 2) ||
+    editDist(p, w) <= Math.max(1, Math.floor(p.length / 5))));
+}
 
 // ------------------------------------------------------------------ trade links: match cards and suggest fair trades
 /** Keys that say "this is the same card": the database id when we know it, plus game + name + number. */
