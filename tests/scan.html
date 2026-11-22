@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Scanner test</title></head>
+<body><pre id="log">running…</pre>
+<script type="module">
+// Scans real card images (single cards and a made-up 3x3 binder page) and checks the match.
+import { scanPhoto } from "../js/scan.js";
+import { openDB } from "../js/store.js";
+const log = s => (document.getElementById("log").textContent += "\n" + s);
+const blobOf = async u => (await fetch(u)).blob();
+const want = [["fixtures/pk-238.png", "sv08-238"], ["fixtures/pk-180.png", "me01-180"], ["fixtures/pk-025.png", "sv03.5-025"], ["fixtures/op-120.jpg", "OP01-120"], ["fixtures/lor.avif", "crd_a6f3c215973844fc8ae5cbc2a4ea388f"]];
+window.results = (async () => {
+  await openDB();
+  const out = {single: [], page: []};
+  for (const [u, id] of want) {
+    const t0 = performance.now();
+    const [r] = await scanPhoto(await blobOf(u), [1, 1], "auto");
+    const ids = r.candidates.map(c => c.id);
+    out.single.push({u, ok: ids.includes(id), top: ids[0] || null, n: ids.length, ms: Math.round(performance.now() - t0), parsed: r.parsed, ...(location.hash === "#text" ? {text: r.text} : {})});
+    if (location.hash === "#text") continue;
+    log(JSON.stringify(out.single.at(-1)));
+  }
+  if (location.hash === "#text") return out;
+  // a fake 9-pocket page: the five cards plus repeats, on a dark binder background
+  const ims = await Promise.all(want.map(async ([u]) => createImageBitmap(await blobOf(u))));
+  const cw = 620, ch = 860, cv = new OffscreenCanvas(cw * 3 + 80, ch * 3 + 80), g = cv.getContext("2d");
+  g.fillStyle = "#222"; g.fillRect(0, 0, cv.width, cv.height);
+  const order = [0, 1, 2, 3, 4, 0, 1, 2, 3];
+  order.forEach((k, i) => g.drawImage(ims[k], 20 + (i % 3) * (cw + 20) + 10, 20 + Math.floor(i / 3) * (ch + 20) + 10, cw - 20, ch - 20));
+  const page = await cv.convertToBlob({type: "image/jpeg", quality: 0.85});
+  const t0 = performance.now();
+  const res = await scanPhoto(page, [3, 3], "auto");
+  res.forEach((r, i) => out.page.push({cell: i, ok: r.candidates.map(c => c.id).includes(want[order[i]][1]), top: r.candidates[0] && r.candidates[0].id}));
+  out.pageMs = Math.round(performance.now() - t0);
+  log(JSON.stringify(out.page) + " ms " + out.pageMs);
+  return out;
+})();
+</script></body></html>

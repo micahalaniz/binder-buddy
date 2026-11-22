@@ -3,168 +3,217 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Binder Buddy: TCG collection tracker</title>
-<meta name="description" content="Free collection tracker for Pokémon, One Piece and Disney Lorcana cards. Photos, prices, condition and quantity, saved on your own device.">
+<title>Binder Buddy: free card collection tracker for Pokémon, One Piece and Lorcana</title>
+<meta name="description" content="Free, private card binder for Pokémon, One Piece and Disney Lorcana. Scan cards, see live prices and price history, check trades, and spot scalper prices. No account, no ads.">
 <meta name="theme-color" content="#3466af">
+<meta property="og:title" content="Binder Buddy: free card binder for collectors">
+<meta property="og:description" content="Scan your cards, see live prices, check if a trade is fair, and spot scalper prices. Pokémon, One Piece and Lorcana. Free, private, no ads.">
+<meta property="og:image" content="https://micahalaniz.github.io/binder-buddy/docs/og.png">
+<meta property="og:url" content="https://micahalaniz.github.io/binder-buddy/">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preload" href="fonts/fredoka.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/nunito.woff2" as="font" type="font/woff2" crossorigin>
 <meta name="apple-mobile-web-app-capable" content="yes">
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root { --bg:#eef2fb; --surface:#fff; --ink:#1f2340; --soft:#5a5f84; --line:#e3e7f3; --accent:#3466af; --accent-ink:#fff; --ok:#1f9d55; --bad:#e0413a; --warn:#b07a00; }
-  * { box-sizing:border-box; }
-  html { -webkit-text-size-adjust:100%; }
-  body { margin:0; font-family:"Nunito",system-ui,sans-serif; color:var(--ink); background:var(--bg); padding-bottom:env(safe-area-inset-bottom); }
-  button, input, select, textarea { font:inherit; color:inherit; }
-  header { background:var(--accent); color:var(--accent-ink); padding:calc(16px + env(safe-area-inset-top)) 16px 30px; }
-  .wrap { max-width:980px; margin:0 auto; }
-  .top { display:flex; align-items:center; gap:10px; }
-  header h1 { font-family:"Fredoka"; margin:0; font-size:clamp(26px,5vw,36px); flex:1; }
-  .iconbtn { border:0; background:rgba(255,255,255,.2); color:var(--accent-ink); width:44px; height:44px; border-radius:14px; font-size:22px; cursor:pointer; }
-  .sub { font-weight:800; opacity:.9; font-size:14px; }
-  main { max-width:980px; margin:0 auto; padding:0 14px 80px; }
-  .panel { background:var(--surface); border-radius:20px; padding:16px; box-shadow:0 6px 22px rgba(20,30,80,.10); }
-  .ask { margin-top:-18px; position:relative; }
-  .ask label { font-family:"Fredoka"; font-size:20px; display:block; margin-bottom:6px; }
-  input, select, textarea { font-weight:700; padding:12px 14px; border:3px solid var(--line); border-radius:14px; width:100%; background:var(--surface); }
-  input:focus, select:focus, textarea:focus { outline:none; border-color:var(--accent); }
-  input[type=color] { padding:2px; height:44px; width:64px; }
-  #q { font-size:19px; }
-  .answer { margin-top:12px; border-radius:16px; padding:14px 16px; display:none; }
-  .answer.yes { display:block; background:rgba(31,157,85,.12); border:3px solid var(--ok); }
-  .answer.no { display:block; background:rgba(224,65,58,.10); border:3px solid var(--bad); }
-  .answer .big { font-family:"Fredoka"; font-size:28px; display:block; line-height:1.1; }
-  .answer .hit { font-weight:700; margin-top:6px; display:flex; align-items:center; gap:8px; }
-  .answer img { width:40px; height:56px; object-fit:cover; border-radius:6px; }
-  .answer a { color:var(--accent); font-weight:800; }
-  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:14px 0; }
-  .stat { background:var(--surface); border-radius:16px; padding:12px 8px; text-align:center; }
-  .stat b { font-family:"Fredoka"; font-size:22px; display:block; }
-  .stat span { font-size:12px; font-weight:800; color:var(--soft); }
-  .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
-  .bar select { width:auto; padding:9px 12px; }
-  .btn { font-weight:800; border:0; border-radius:14px; padding:11px 16px; background:var(--accent); color:var(--accent-ink); cursor:pointer; }
-  .btn.ghost { background:var(--surface); color:var(--ink); border:3px solid var(--line); }
-  .btn.red { background:var(--bad); color:#fff; }
-  .btn.ok { background:var(--ok); color:#fff; }
-  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
-  .fchip { border:3px solid var(--line); background:var(--surface); border-radius:99px; padding:7px 13px; font-weight:800; cursor:pointer; font-size:14px; }
-  .fchip.on { background:var(--ink); color:var(--surface); border-color:var(--ink); }
-  .fchip i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:0; }
-  .grouph { font-family:"Fredoka"; font-size:18px; margin:16px 4px 8px; display:flex; align-items:center; gap:8px; }
-  .grouph i { width:14px; height:14px; border-radius:50%; display:inline-block; }
-  .grouph small { color:var(--soft); font-family:"Nunito"; font-weight:800; }
-  .list { display:flex; flex-direction:column; gap:8px; }
-  .card { background:var(--surface); border-radius:16px; padding:12px 14px 12px 16px; display:grid; grid-template-columns:1fr auto; gap:6px 12px; align-items:center; border-left:7px solid var(--stripe, transparent); }
-  .card.withpic { grid-template-columns:60px 1fr auto; }
-  .card.withpic .money { grid-column:2 / -1; }
-  .thumb { width:60px; height:84px; border-radius:8px; object-fit:cover; background:var(--line); cursor:zoom-in; }
-  .nm { font-family:"Fredoka"; font-size:18px; }
-  .meta { font-size:13px; color:var(--soft); font-weight:700; margin-top:2px; }
-  .tag { display:inline-block; font-size:11px; font-weight:800; padding:3px 8px; border-radius:99px; margin:2px 4px 0 0; color:#fff; }
-  .tag.soft { background:var(--line); color:var(--soft); }
-  .qty { display:flex; align-items:center; gap:6px; }
-  .qty button { width:36px; height:36px; border-radius:50%; border:3px solid var(--line); background:var(--surface); font-size:20px; font-weight:800; cursor:pointer; line-height:1; }
-  .qty b { min-width:28px; text-align:center; font-family:"Fredoka"; font-size:21px; }
-  .money { grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:4px 14px; font-size:14px; font-weight:800; }
-  .money .up { color:var(--ok); } .money .down { color:var(--bad); } .money .stale { color:var(--warn); }
-  .money a, .money button { color:var(--accent); background:none; border:0; font-weight:800; cursor:pointer; padding:0; text-decoration:underline; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
-  .gcard { background:var(--surface); border-radius:16px; padding:8px; cursor:pointer; border-bottom:6px solid var(--stripe, transparent); }
-  .gcard img, .gcard .nopic { width:100%; aspect-ratio:5/7; object-fit:cover; border-radius:10px; display:block; background:var(--line); }
-  .gcard .nopic { display:grid; place-items:center; color:var(--soft); font-weight:800; font-size:13px; text-align:center; padding:8px; }
-  .gcard b { font-family:"Fredoka"; display:block; margin-top:6px; font-size:15px; line-height:1.15; }
-  .gcard span { font-size:12px; font-weight:800; color:var(--soft); }
-  .empty { text-align:center; color:var(--soft); font-weight:800; padding:30px 10px; background:var(--surface); border-radius:16px; }
-  .modal { position:fixed; inset:0; background:rgba(10,14,40,.5); display:none; align-items:flex-start; justify-content:center; padding:16px 10px; overflow:auto; z-index:5; }
-  .modal.open { display:flex; }
-  .sheet { background:var(--surface); border-radius:22px; padding:20px; width:100%; max-width:600px; }
-  .sheet h2 { font-family:"Fredoka"; margin:0 0 12px; }
-  .sheet h3 { font-family:"Fredoka"; margin:18px 0 8px; font-size:19px; }
-  .g2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .f { margin-bottom:10px; } .f > label { font-weight:800; font-size:13px; color:var(--soft); display:block; margin-bottom:3px; }
-  .acts { display:flex; gap:8px; justify-content:flex-end; margin-top:8px; flex-wrap:wrap; }
-  .note { font-size:13px; color:var(--soft); font-weight:700; }
-  .seg { display:flex; flex-wrap:wrap; gap:6px; }
-  .seg button { border:3px solid var(--line); background:var(--surface); border-radius:12px; padding:8px 12px; font-weight:800; cursor:pointer; }
-  .seg button.on { border-color:var(--accent); background:var(--accent); color:var(--accent-ink); }
-  .themes { display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:8px; }
-  .theme { border:3px solid var(--line); border-radius:14px; padding:8px; cursor:pointer; text-align:center; font-weight:800; font-size:13px; background:var(--surface); }
-  .theme.on { border-color:var(--ink); }
-  .theme .sw { height:34px; border-radius:9px; margin-bottom:5px; }
-  .colrow { display:flex; align-items:center; gap:10px; margin-bottom:8px; font-weight:800; }
-  .colrow span { flex:1; }
-  .photos { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
-  .ph { position:relative; }
-  .ph img { width:72px; height:100px; object-fit:cover; border-radius:8px; border:3px solid var(--line); display:block; }
-  .ph.cover img { border-color:var(--accent); }
-  .ph .x, .ph .r, .ph .c { position:absolute; width:26px; height:26px; border-radius:50%; border:0; font-weight:800; cursor:pointer; font-size:13px; }
-  .ph .x { top:-8px; right:-8px; background:var(--bad); color:#fff; }
-  .ph .r { bottom:-8px; right:-8px; background:var(--ink); color:var(--surface); }
-  .ph .c { bottom:-8px; left:-8px; background:var(--accent); color:var(--accent-ink); font-size:12px; }
-  .addph { width:72px; height:100px; border-radius:8px; border:3px dashed var(--line); display:grid; place-items:center; text-align:center; font-weight:800; font-size:12px; color:var(--soft); cursor:pointer; }
-  .tagpick { display:flex; flex-wrap:wrap; gap:6px; }
-  .tagpick button { border:3px solid transparent; border-radius:99px; padding:6px 12px; font-weight:800; cursor:pointer; color:#fff; opacity:.45; }
-  .tagpick button.on { opacity:1; border-color:var(--ink); }
-  .lb { position:fixed; inset:0; background:rgba(5,8,25,.9); display:none; align-items:center; justify-content:center; flex-direction:column; z-index:9; padding:16px; }
-  .lb.open { display:flex; }
-  .lb img { max-width:100%; max-height:76vh; border-radius:12px; }
-  .lb .cap { color:#fff; font-weight:800; margin-top:10px; text-align:center; }
-  .lb .nav { display:flex; gap:10px; margin-top:10px; }
-  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--ink); color:var(--surface); padding:12px 18px; border-radius:14px; font-weight:800; z-index:20; display:none; max-width:90vw; }
-  footer { text-align:center; font-size:12px; color:var(--soft); font-weight:700; margin-top:30px; line-height:1.6; }
-  footer a { color:var(--accent); }
-  body.compact .card { padding:8px 12px; } body.compact .money { font-size:13px; } body.compact .thumb { width:44px; height:62px; } body.compact .card.withpic { grid-template-columns:44px 1fr auto; }
-  @media (max-width:620px) { .stats { grid-template-columns:repeat(2,1fr); } .g2 { grid-template-columns:1fr; } }
-</style>
+<link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 <header><div class="wrap">
   <div class="top">
     <h1 id="appTitle">📒 Binder Buddy</h1>
-    <button class="iconbtn" id="openSettings" title="Customize" aria-label="Customize">🎨</button>
+    <button class="iconbtn" id="openSettings" title="Make it yours" aria-label="Customize colors and layout">🎨</button>
   </div>
-  <div class="sub">Pokémon · One Piece · Disney Lorcana. Your cards, saved on your device.</div>
+  <div class="sub" id="appSub">Pokémon · One Piece · Disney Lorcana. Free for collectors, forever.</div>
 </div></header>
 
 <main>
-  <div class="panel ask">
-    <label for="q">Do I have it?</label>
-    <input id="q" placeholder="Type a card name, set, number or rarity…" autocomplete="off">
-    <div class="answer" id="answer"></div>
-  </div>
+  <!-- ============================================================ BINDER -->
+  <section class="view on" id="v-binder" aria-label="My binder">
+    <div class="panel lift">
+      <label class="label" for="q">Do I have it?</label>
+      <input id="q" class="big-input" type="search" placeholder="Type a card name, set, number or rarity…" autocomplete="off">
+      <div class="answer" id="answer" aria-live="polite"></div>
+    </div>
+    <div id="demoBanner"></div>
+    <div class="panel" id="valuePanel">
+      <div class="valuebox">
+        <div><div class="note">My collection is worth</div><div class="hero" id="s-val">$0.00</div></div>
+        <button class="btn ghost small" id="refreshBtn" title="Get today's prices">🔄 Update prices</button>
+        <div class="delta" id="s-delta"></div><div class="note" id="s-priced" style="text-align:right"></div>
+      </div>
+      <div id="valueChart"></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="s-kinds">0</b><span>different cards</span></div>
+      <div class="stat"><b id="s-qty">0</b><span>total cards</span></div>
+      <div class="stat"><b id="s-hits">0</b><span>hits ⭐</span></div>
+      <div class="stat"><b id="s-gain">$0</b><span>vs. what I paid</span></div>
+    </div>
+    <div class="chips" id="gameChips"></div>
+    <div class="bar mainacts">
+      <button class="btn ok" id="addBtn">+ Add a card</button>
+      <button class="btn" id="scanBtn">📷 Scan cards</button>
+    </div>
+    <div class="bar tools">
+      <select id="sort" aria-label="Sort cards">
+        <option value="name">A to Z</option><option value="value">Most valuable</option><option value="new">Newest added</option>
+        <option value="rarity">Rarest first</option><option value="mover">Biggest price change</option><option value="stale">Price check needed</option>
+      </select>
+      <select id="tagFilter" aria-label="Filter by tag"></select>
+      <button class="btn ghost" id="hitsBtn" aria-pressed="false">⭐ Hits only</button>
+      <button class="btn ghost" id="bundleBtn">💰 Bundle value</button>
+      <button class="btn ghost" id="shareBtn">📤 Share my hits</button>
+    </div>
+    <div id="out"></div>
+  </section>
 
-  <div class="stats">
-    <div class="stat"><b id="s-kinds">0</b><span>different cards</span></div>
-    <div class="stat"><b id="s-qty">0</b><span>total cards</span></div>
-    <div class="stat"><b id="s-val">$0</b><span>market value</span></div>
-    <div class="stat"><b id="s-gain">$0</b><span>vs. what you paid</span></div>
-  </div>
+  <!-- ============================================================ WISHLIST -->
+  <section class="view" id="v-wish" aria-label="Wishlist">
+    <div class="panel lift">
+      <h2>⭐ Wishlist</h2>
+      <p class="note">Cards you're hunting. Set the most you'd pay, and Binder Buddy tells you when the market price drops to it.</p>
+      <div class="acts" style="justify-content:flex-start"><button class="btn ok" id="wishAdd">+ Add a card I want</button></div>
+      <div id="wishSum" class="note" style="margin-top:8px"></div>
+    </div>
+    <div id="wishOut" class="list"></div>
+  </section>
 
-  <div class="chips" id="gameChips"></div>
-  <div class="bar">
-    <button class="btn ok" id="addBtn">+ Add a card</button>
-    <select id="sort" aria-label="Sort">
-      <option value="name">A to Z</option><option value="value">Most valuable</option>
-      <option value="new">Newest added</option><option value="rarity">Rarest first</option><option value="stale">Price check needed</option>
-    </select>
-    <select id="tagFilter" aria-label="Filter by tag"></select>
-    <button class="btn ghost" id="hitsBtn">⭐ Hits only</button>
-    <button class="btn ghost" id="bundleBtn">💰 Bundle value</button>
-  </div>
-  <div id="out"></div>
+  <!-- ============================================================ TRADE -->
+  <section class="view" id="v-trade" aria-label="Trade checker">
+    <div class="panel lift">
+      <h2>🤝 Is this trade fair?</h2>
+      <p class="note">Add what you give and what you get. Values use today's market prices, and you can change any number.</p>
+    </div>
+    <div class="sides">
+      <div class="panel side"><h3>I give <span id="t-give-total"></span></h3><div id="t-give"></div>
+        <div class="acts" style="justify-content:flex-start"><button class="btn small" id="t-give-add">+ From my binder</button><button class="btn ghost small" id="t-give-find">+ Find a card</button></div></div>
+      <div class="panel side"><h3>I get <span id="t-get-total"></span></h3><div id="t-get"></div>
+        <div class="acts" style="justify-content:flex-start"><button class="btn small" id="t-get-find">+ Find a card</button><button class="btn ghost small" id="t-get-manual">+ Type it in</button></div></div>
+    </div>
+    <div id="t-verdict"></div>
+    <div class="acts">
+      <button class="btn ghost" id="t-clear">Clear</button>
+      <button class="btn ghost" id="t-copy">Copy trade summary</button>
+      <button class="btn ok" id="t-done">Trade done: update my binder</button>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <h3 style="margin-top:0">Where people trade cards</h3>
+      <div class="trade-where" id="whereList"></div>
+    </div>
+  </section>
 
-  <footer>
-    Your collection is saved only on this device. Nothing is uploaded, and there are no accounts, ads or tracking.<br>
-    Back it up now and then in 🎨 Customize → Backup.<br>
-    Not affiliated with The Pokémon Company, Bandai, Disney or Ravensburger. Made by Micah Alaniz.
-  </footer>
+  <!-- ============================================================ PRICE CHECK -->
+  <section class="view" id="v-check" aria-label="Fair price check">
+    <div class="panel lift">
+      <h2>🛡️ Scalper Shield</h2>
+      <p class="note">About to buy? Check whether the price is fair before you pay.</p>
+      <div class="seg" id="pc-kind" style="margin:10px 0"></div>
+      <div id="pc-single">
+        <div id="pc-card"></div>
+        <div class="acts" style="justify-content:flex-start;margin-top:0"><button class="btn" id="pc-find">🔎 Find the card</button></div>
+        <div class="f" style="margin-top:10px"><label for="pc-market">Market value (fills in by itself when you pick a card)</label><input id="pc-market" type="number" min="0" step="0.01" inputmode="decimal"></div>
+      </div>
+      <div id="pc-sealed" hidden>
+        <div class="f"><label for="pc-preset">What is it?</label><select id="pc-preset"></select></div>
+        <div class="f"><label for="pc-msrp">Store price (MSRP)</label><input id="pc-msrp" type="number" min="0" step="0.01" inputmode="decimal"></div>
+        <p class="note" id="pc-msrp-note"></p>
+      </div>
+      <div class="f"><label for="pc-ask">Price they're asking</label><input id="pc-ask" class="big-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <div id="pc-out" aria-live="polite"></div>
+      <div id="pc-links"></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">How to beat scalpers</h3>
+      <ul class="tips">
+        <li><b>Want one card? Buy the single.</b> Ripping packs to chase it usually costs far more than buying it outright.</li>
+        <li><b>Check what it sold for, not what it's listed at.</b> Use the sold-price links. Asking prices can be anything.</li>
+        <li><b>Wait out the hype.</b> New sets and hot products are often priciest in the first weeks, and reprints can bring prices down.</li>
+        <li><b>Buy sealed at store price.</b> Big stores and your local game store sell at MSRP when they have stock. Ask when restocks come in.</li>
+        <li><b>Walk away from pressure.</b> "Last one, price goes up tomorrow" is a sales trick. There's always another card.</li>
+        <li><b>Trade with collectors, not flippers.</b> Fair trades keep the hobby fun. Use the 🤝 Trade tab to check.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================================================ MORE -->
+  <section class="view" id="v-more" aria-label="More">
+    <div class="panel lift">
+      <h2>Binder Buddy</h2>
+      <p class="note">A free card binder by <b>Sweet Onion Studios</b>, made for collectors, not scalpers.</p>
+      <div class="acts" style="justify-content:flex-start">
+        <button class="btn" id="m-custom">🎨 Make it yours</button>
+        <button class="btn ghost" id="m-backupBtn">💾 Backup &amp; import</button>
+        <button class="btn ghost" id="m-tour">👋 Show the welcome again</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">Our promise</h3>
+      <ul class="pledge">
+        <li>✅ Free forever. Every feature, for everyone. No paywall.</li>
+        <li>✅ No ads, no accounts, no tracking. Your cards stay on your device.</li>
+        <li>✅ We never sell data, because we never collect it.</li>
+        <li>✅ Built for collectors: no bot tools, no restock-sniping, no flipping features.</li>
+        <li>✅ Tools that keep the hobby fair: fair-trade checks, scalper-price checks and real sold prices.</li>
+      </ul>
+      <div id="supportBox"></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">Where the prices come from</h3>
+      <p class="note">Card info and prices come from free, open community databases. Prices update about once a day and are estimates, not offers.</p>
+      <ul class="tips">
+        <li><b>Pokémon:</b> <a href="https://tcgdex.dev" target="_blank" rel="noopener">TCGdex</a> (TCGplayer market prices plus Cardmarket averages)</li>
+        <li><b>Disney Lorcana:</b> <a href="https://lorcast.com" target="_blank" rel="noopener">Lorcast</a> (daily market prices)</li>
+        <li><b>One Piece:</b> <a href="https://optcgapi.com" target="_blank" rel="noopener">OPTCG API</a> (TCGplayer market prices and 2-week history)</li>
+        <li><b>Card scanner:</b> <a href="https://github.com/naptha/tesseract.js" target="_blank" rel="noopener">Tesseract.js</a>, which reads the photo on your device. Your photos are never uploaded.</li>
+      </ul>
+      <p class="note" id="affNote" hidden>Some "buy" links are affiliate links: if you buy through them, Binder Buddy may earn a small commission at no extra cost to you. It helps keep the app free.</p>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">Privacy, plainly</h3>
+      <p class="note">Your binder, photos, wishlist and settings are stored in this browser on this device only. When you search, scan or update prices, the app asks the databases above about a card name or number, and nothing about you. The first scan downloads the free scanner program from jsDelivr. Back up now and then, because clearing your browser data erases your binder.</p>
+      <p class="note">Not affiliated with or endorsed by The Pokémon Company, Nintendo, Bandai, Disney, Ravensburger or TCGplayer. Card names and images belong to their owners.</p>
+      <p class="note"><a href="case-study.html">How it's built (case study)</a> · <a href="https://github.com/micahalaniz/binder-buddy" target="_blank" rel="noopener">Source code</a> · Version <span id="ver"></span></p>
+    </div>
+    <footer>Made with care by Micah Alaniz · Sweet Onion Studios 🧅</footer>
+  </section>
 </main>
 
+<nav class="tabs" aria-label="Sections">
+  <button data-v="binder" class="on" aria-current="page"><span aria-hidden="true">📒</span>Binder</button>
+  <button data-v="wish"><span aria-hidden="true">⭐</span>Wishlist</button>
+  <button data-v="trade"><span aria-hidden="true">🤝</span>Trade</button>
+  <button data-v="check"><span aria-hidden="true">🛡️</span>Price check</button>
+  <button data-v="more"><span aria-hidden="true">☰</span>More</button>
+</nav>
+
+<!-- ============================================================ SHEETS -->
+<!-- find a card in the databases -->
+<div class="modal" id="m-pick" role="dialog" aria-modal="true" aria-labelledby="pk-title"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h2 id="pk-title">Find your card</h2>
+  <div class="seg" id="pk-game"></div>
+  <div style="display:flex;gap:8px;margin-top:10px">
+    <input id="pk-q" class="big-input" type="search" placeholder="Name, plus number if you know it" autocomplete="off" enterkeyhint="search">
+    <button class="btn" id="pk-go" aria-label="Search">🔎</button>
+  </div>
+  <p class="note" id="pk-hint">Try "Pikachu ex 238", "Shanks OP01-120" or "Elsa Spirit of Winter".</p>
+  <div id="pk-out" aria-live="polite"></div>
+  <div class="acts"><button class="btn ghost" id="pk-manual">Can't find it? Type it in myself</button></div>
+</div></div>
+
+<!-- card detail -->
+<div class="modal" id="m-detail" role="dialog" aria-modal="true" aria-labelledby="d-name"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <div id="d-body"></div>
+</div></div>
+
 <!-- add / edit card -->
-<div class="modal" id="m-edit"><div class="sheet">
-  <h2 id="m-title">Add a card</h2>
+<div class="modal" id="m-edit" role="dialog" aria-modal="true" aria-labelledby="e-title"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h2 id="e-title">Add a card</h2>
+  <div id="e-linked"></div>
   <div class="f"><label>Game</label><div class="seg" id="f-game"></div></div>
   <div class="f"><label for="f-name">Card name *</label><input id="f-name" placeholder="Card name"></div>
   <div class="g2">
@@ -173,26 +222,24 @@
   </div>
   <div class="g2">
     <div class="f"><label for="f-rar">Rarity</label><select id="f-rar"></select></div>
-    <div class="f"><label for="f-lang">Language</label>
-      <select id="f-lang"><option>English</option><option>Japanese</option><option>Chinese</option><option>Korean</option><option>French</option><option>German</option><option>Spanish</option><option>Italian</option><option>Portuguese</option><option>Other</option></select></div>
+    <div class="f" id="f-vbox"><label for="f-v">Version</label><select id="f-v"></select></div>
   </div>
   <div class="g2">
     <div class="f"><label for="f-cond">Condition</label>
       <select id="f-cond"><option>Near Mint</option><option>Lightly Played</option><option>Moderately Played</option><option>Heavily Played</option><option>Damaged</option><option>Graded</option></select></div>
     <div class="f" id="gradeBox"><label for="f-grade">Grade</label><input id="f-grade" placeholder="PSA 10, BGS 9.5, CGC 10…"></div>
   </div>
-  <div class="f"><label>Photos <span class="note">(★ = cover photo, ⟳ = rotate)</span></label>
+  <div class="f"><label for="f-lang">Language</label>
+    <select id="f-lang"><option>English</option><option>Japanese</option><option>Chinese</option><option>Korean</option><option>French</option><option>German</option><option>Spanish</option><option>Italian</option><option>Portuguese</option><option>Other</option></select></div>
+  <div class="f"><label>My photos <span class="note">(★ cover · ⟳ rotate)</span></label>
     <div class="photos" id="f-photos"></div>
     <input type="file" id="f-file" accept="image/*" multiple hidden>
   </div>
   <div class="g2">
     <div class="f"><label for="f-qty">How many</label><input id="f-qty" type="number" min="0" step="1" inputmode="numeric"></div>
-    <div class="f"><label for="f-paid">Paid (each)</label><input id="f-paid" type="number" min="0" step="0.01" inputmode="decimal"></div>
+    <div class="f"><label for="f-paid">I paid (each)</label><input id="f-paid" type="number" min="0" step="0.01" inputmode="decimal"></div>
   </div>
-  <div class="g2">
-    <div class="f"><label for="f-mkt">Market value (each)</label><input id="f-mkt" type="number" min="0" step="0.01" inputmode="decimal"></div>
-    <div class="f"><label>&nbsp;</label><a class="btn ghost" id="f-look" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none">Look up price ↗</a></div>
-  </div>
+  <div class="f"><label for="f-mkt">Market value (each)</label><input id="f-mkt" type="number" min="0" step="0.01" inputmode="decimal"></div>
   <div class="f"><label>Tags</label><div class="tagpick" id="f-tags"></div></div>
   <div class="f"><label for="f-notes">Notes</label><input id="f-notes" placeholder="Binder page, where you got it, trade value…"></div>
   <div class="acts">
@@ -200,654 +247,155 @@
     <button class="btn ghost" id="f-cancel">Cancel</button>
     <button class="btn ok" id="f-save">Save</button>
   </div>
-  <p class="note" id="f-msg"></p>
+  <p class="note" id="f-msg" aria-live="polite"></p>
+</div></div>
+
+<!-- wishlist item -->
+<div class="modal" id="m-want" role="dialog" aria-modal="true" aria-labelledby="w-title"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h2 id="w-title">Add to wishlist</h2>
+  <div id="w-linked"></div>
+  <div class="f"><label for="w-name">Card name *</label><input id="w-name"></div>
+  <div class="g2">
+    <div class="f"><label for="w-max">Most I'd pay</label><input id="w-max" type="number" min="0" step="0.01" inputmode="decimal"></div>
+    <div class="f"><label for="w-mkt">Market value now</label><input id="w-mkt" type="number" min="0" step="0.01" inputmode="decimal"></div>
+  </div>
+  <div class="f"><label for="w-note">Note</label><input id="w-note" placeholder="For my Eevee binder, need it for a deck…"></div>
+  <div class="acts"><button class="btn red" id="w-del" style="margin-right:auto">Remove</button><button class="btn ghost" data-close>Cancel</button><button class="btn ok" id="w-save">Save</button></div>
+</div></div>
+
+<!-- scan -->
+<div class="modal" id="m-scan" role="dialog" aria-modal="true" aria-labelledby="sc-title"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h2 id="sc-title">📷 Scan cards</h2>
+  <div id="sc-setup">
+    <div class="f"><label>What's in the photo?</label><div class="seg" id="sc-layout"></div></div>
+    <div class="f"><label>Game</label><div class="seg" id="sc-game"></div></div>
+    <ul class="tips note">
+      <li>Lay it flat in good light, and tilt it a little to stop glare on sleeves.</li>
+      <li>Fill the photo with the card or page. The small code at the bottom (like <b>238/191</b> or <b>OP01-120</b>) is what we read.</li>
+      <li>Photos stay on your phone. You'll check every match before anything is added.</li>
+    </ul>
+    <div class="acts"><button class="btn ghost" id="sc-gallery">🖼️ Pick a photo</button><button class="btn ok" id="sc-camera">📷 Take a photo</button></div>
+    <input type="file" id="sc-file" accept="image/*" hidden>
+  </div>
+  <div id="sc-run" hidden>
+    <div class="note" id="sc-status"></div>
+    <div class="progress"><i id="sc-bar"></i></div>
+    <div id="sc-rows"></div>
+    <div class="acts"><button class="btn ghost" id="sc-again">Scan another</button><button class="btn ok" id="sc-add" disabled>Add to binder</button></div>
+  </div>
+</div></div>
+
+<!-- pick from my binder (for trades) -->
+<div class="modal" id="m-mine" role="dialog" aria-modal="true" aria-labelledby="mi-title"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h2 id="mi-title">Pick from my binder</h2>
+  <input id="mi-q" type="search" placeholder="Search my cards" autocomplete="off">
+  <div id="mi-out" class="list" style="margin-top:10px"></div>
 </div></div>
 
 <!-- customize -->
-<div class="modal" id="m-set"><div class="sheet">
-  <h2>🎨 Make it yours</h2>
-
+<div class="modal" id="m-set" role="dialog" aria-modal="true" aria-labelledby="set-title"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h2 id="set-title">🎨 Make it yours</h2>
   <h3>Theme</h3>
   <div class="themes" id="themes"></div>
-  <div class="colrow" style="margin-top:10px"><span>Background color</span><input type="color" id="c-bg"></div>
-  <div class="colrow"><span>Main color (header &amp; buttons)</span><input type="color" id="c-accent"></div>
+  <div class="colrow" style="margin-top:10px"><span>Background color</span><input type="color" id="c-bg" aria-label="Background color"></div>
+  <div class="colrow"><span>Main color (header &amp; buttons)</span><input type="color" id="c-accent" aria-label="Main color"></div>
   <div class="colrow"><span>Dark mode</span><select id="c-dark" style="width:auto"><option value="0">Off</option><option value="1">On</option></select></div>
-
-  <h3>Color-code my cards by</h3>
-  <div class="seg" id="colorBy"></div>
-  <div id="colorEditors" style="margin-top:10px"></div>
-
-  <h3>Group cards by</h3>
-  <div class="seg" id="groupBy"></div>
-
-  <h3>Layout</h3>
-  <div class="seg" id="layout"></div>
-
+  <h3>Color-code my cards by</h3><div class="seg" id="colorBy"></div><div id="colorEditors" style="margin-top:10px"></div>
+  <h3>Group cards by</h3><div class="seg" id="groupBy"></div>
+  <h3>Layout</h3><div class="seg" id="layout"></div>
   <h3>Tags (your own labels)</h3>
   <p class="note">Make labels like "Trade binder", "For sale" or "Keep forever", each with its own color.</p>
   <div id="tagList"></div>
-  <div class="g2"><input id="newTag" placeholder="New tag name"><div style="display:flex;gap:8px"><input type="color" id="newTagCol" value="#ff7a59"><button class="btn" id="addTag">Add tag</button></div></div>
-
-  <h3>Games I collect</h3>
-  <div class="seg" id="gamesOn"></div>
-
+  <div class="g2"><input id="newTag" placeholder="New tag name" aria-label="New tag name"><div style="display:flex;gap:8px"><input type="color" id="newTagCol" value="#ff7a59" aria-label="New tag color"><button class="btn" id="addTag">Add tag</button></div></div>
+  <h3>Games I collect</h3><div class="seg" id="gamesOn"></div>
   <h3>Photos</h3>
   <div class="colrow"><span>Crop photos to card shape</span><select id="p-crop" style="width:auto"><option value="1">Yes</option><option value="0">No, keep the whole photo</option></select></div>
   <div class="colrow"><span>Photo quality</span><select id="p-q" style="width:auto"><option value="1200">Standard (saves space)</option><option value="2000">High</option></select></div>
   <div class="colrow"><span>"Add photo" opens the camera</span><select id="p-cam" style="width:auto"><option value="0">Ask (camera or gallery)</option><option value="1">Camera right away</option></select></div>
-
-  <h3>Money</h3>
-  <div class="colrow"><span>Currency</span><select id="cur" style="width:auto"><option>$</option><option>€</option><option>£</option><option>¥</option><option>CA$</option><option>A$</option><option>MX$</option></select></div>
-
+  <h3>Prices</h3>
+  <div class="colrow"><span>Update prices by themselves once a day</span><select id="autoPrice" style="width:auto"><option value="1">Yes</option><option value="0">No</option></select></div>
+  <div class="colrow"><span>Currency symbol</span><select id="cur" style="width:auto"><option>$</option><option>€</option><option>£</option><option>¥</option><option>CA$</option><option>A$</option><option>MX$</option></select></div>
+  <p class="note">Live prices come in US dollars (TCGplayer). The symbol only changes how numbers look.</p>
   <h3>Name</h3>
-  <div class="colrow"><span>App title</span><input id="titleIn" style="max-width:260px" maxlength="30"></div>
+  <div class="colrow"><span>App title</span><input id="titleIn" style="max-width:260px" maxlength="30" aria-label="App title"></div>
+  <div class="acts"><button class="btn" data-close>Done</button></div>
+</div></div>
 
-  <h3>Backup</h3>
+<!-- backup -->
+<div class="modal" id="m-backup" role="dialog" aria-modal="true" aria-labelledby="bk-title"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h2 id="bk-title">💾 Backup &amp; import</h2>
   <p class="note">Everything lives on this device. Save a backup file (with photos) to move to a new phone or keep it safe.</p>
   <div class="acts" style="justify-content:flex-start">
     <button class="btn" id="exportBtn">Save backup file</button>
     <button class="btn ghost" id="importBtn">Load backup file</button>
-    <button class="btn ghost" id="csvBtn">Copy as spreadsheet</button>
-    <button class="btn ghost" id="bulkBtn">Add many at once</button>
     <input type="file" id="importFile" accept=".json,application/json" hidden>
   </div>
-  <p class="note" id="storageNote"></p>
-  <div class="acts"><button class="btn" id="setDone">Done</button></div>
-</div></div>
-
-<!-- bulk add -->
-<div class="modal" id="m-bulk"><div class="sheet">
-  <h2>Add many at once</h2>
+  <h3>Spreadsheets</h3>
+  <div class="acts" style="justify-content:flex-start">
+    <button class="btn ghost" id="csvBtn">Copy as spreadsheet</button>
+    <button class="btn ghost" id="csvFileBtn">Download CSV file</button>
+  </div>
+  <h3>Add many at once</h3>
   <p class="note">One card per line: <b>game, name, set, number, rarity, condition, quantity, paid, market</b>. Game is pokemon, onepiece or lorcana. Only game and name are needed.<br>
-  pokemon, Pikachu ex, Surging Sparks, 238/191, SIR, Near Mint, 1, 40, 55<br>lorcana, Elsa - Spirit of Winter, The First Chapter, 207, Enchanted</p>
-  <textarea id="bulkText" rows="8"></textarea>
-  <div class="acts"><button class="btn ghost" id="bulkCancel">Cancel</button><button class="btn ok" id="bulkGo">Add them</button></div>
-  <p class="note" id="bulkMsg"></p>
+    pokemon, Pikachu ex, Surging Sparks, 238/191, SIR, Near Mint, 1, 40, 55<br>lorcana, Elsa - Spirit of Winter, The First Chapter, 207, Enchanted</p>
+  <textarea id="bulkText" rows="6" aria-label="Cards to add, one per line"></textarea>
+  <div class="acts"><button class="btn ok" id="bulkGo">Add them</button></div>
+  <p class="note" id="bulkMsg" aria-live="polite"></p>
+  <p class="note" id="storageNote"></p>
 </div></div>
 
-<!-- bundle / sell calculator -->
-<div class="modal" id="m-bundle"><div class="sheet">
-  <h2>💰 Bundle value</h2>
+<!-- bundle -->
+<div class="modal" id="m-bundle" role="dialog" aria-modal="true" aria-labelledby="bd-title"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h2 id="bd-title">💰 Bundle value</h2>
   <p class="note">Uses the cards showing right now. Filter first (for example a game, the "For sale" tag, or ⭐ Hits only) to price just that pile.</p>
-  <div class="colrow"><span>Leave out cards worth less than</span><input id="bd-min" type="number" min="0" step="0.5" value="0" style="max-width:110px" inputmode="decimal"></div>
-  <div class="colrow"><span>Price at <b id="bd-pctl">80</b>% of market</span><input id="bd-pct" type="range" min="40" max="110" step="5" value="80" style="max-width:220px;padding:0;border:0"></div>
+  <div class="colrow"><span>Leave out cards worth less than</span><input id="bd-min" type="number" min="0" step="0.5" value="0" style="max-width:110px" inputmode="decimal" aria-label="Minimum card value"></div>
+  <div class="colrow"><span>Price at <b id="bd-pctl">80</b>% of market</span><input id="bd-pct" type="range" min="40" max="110" step="5" value="80" style="max-width:220px" aria-label="Percent of market"></div>
   <div class="seg" id="bd-quick"></div>
   <div id="bd-out" style="margin-top:12px"></div>
-  <p class="note">Rough guide: shops and vendors often pay well under market when they buy from you, and selling one card at a time usually gets closer to full market. A bundle discount helps it sell fast.</p>
-  <div class="acts"><button class="btn ghost" id="bd-copy">Copy list to share</button><button class="btn" id="bd-close">Done</button></div>
+  <p class="note">Rough guide: shops usually pay well under market when they buy from you. Selling one card at a time gets closer to full market, and a bundle discount helps a pile sell fast.</p>
+  <div class="acts"><button class="btn ghost" id="bd-copy">Copy list to share</button><button class="btn" data-close>Done</button></div>
 </div></div>
 
-<div class="lb" id="lb"><img id="lb-img" alt=""><div class="cap" id="lb-cap"></div>
-  <div class="nav"><button class="btn ghost" id="lb-prev">◀</button><button class="btn" id="lb-close">Close</button><button class="btn ghost" id="lb-next">▶</button></div></div>
-<div class="toast" id="toast"></div>
+<!-- share image -->
+<div class="modal" id="m-share" role="dialog" aria-modal="true" aria-labelledby="sh-title"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h2 id="sh-title">📤 Share my hits</h2>
+  <div class="colrow"><span>Show prices on the picture</span><select id="sh-prices" style="width:auto"><option value="0">No (safer to post)</option><option value="1">Yes</option></select></div>
+  <div class="colrow"><span>Which cards</span><select id="sh-which" style="width:auto"><option value="hits">My top hits</option><option value="shown">Cards showing now</option></select></div>
+  <img id="sh-img" alt="Preview of the picture to share" style="width:100%;border-radius:12px;margin-top:8px;background:var(--line);min-height:120px">
+  <div class="acts"><button class="btn ghost" id="sh-save">Save picture</button><button class="btn ok" id="sh-send">Share</button></div>
+</div></div>
 
-<script>
-"use strict";
-const $ = id => document.getElementById(id);
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
-function toast(t) { const el = $("toast"); el.textContent = t; el.style.display = "block"; clearTimeout(toast.t); toast.t = setTimeout(() => el.style.display = "none", 2600); }
+<!-- welcome -->
+<div class="modal" id="m-welcome" role="dialog" aria-modal="true" aria-labelledby="wl-title"><div class="sheet" tabindex="-1">
+  <h2 id="wl-title">👋 Welcome to Binder Buddy</h2>
+  <p style="font-weight:700;line-height:1.5">Your whole card collection in your pocket. <b>Free, private, no ads.</b></p>
+  <ul class="tips">
+    <li>📷 <b>Scan</b> a card or a whole binder page</li>
+    <li>💵 <b>Live prices</b> and price history, updated every day</li>
+    <li>🤝 <b>Trade checker</b> so every trade is fair</li>
+    <li>🛡️ <b>Scalper Shield</b> spots overpriced cards and boxes</li>
+  </ul>
+  <h3>What do you collect?</h3>
+  <div class="seg" id="wl-games"></div>
+  <h3>Pick a look</h3>
+  <div class="themes" id="wl-themes"></div>
+  <div class="acts">
+    <button class="btn ghost" id="wl-demo">Look around with sample cards</button>
+    <button class="btn ok" id="wl-go">Start my binder</button>
+  </div>
+</div></div>
 
-// ---------------------------------------------------------------- games
-// Rarities are listed lowest to highest. "hit" = what counts as a pull worth showing off.
-const GAMES = {
-  pokemon: { name: "Pokémon", color: "#f2b705",
-    rar: ["Common", "Uncommon", "Rare", "Holo Rare", "Promo", "Double Rare (ex)", "Ultra Rare", "ACE SPEC", "Shiny Rare", "Art Rare (AR)",
-          "Illustration Rare (IR)", "Special Art Rare (SAR)", "Special Illustration Rare (SIR)", "Hyper Rare (Gold)", "Mega Hyper Rare"],
-    hitFrom: "Double Rare (ex)",
-    price: q => "https://www.tcgplayer.com/search/pokemon/product?q=" + q },
-  onepiece: { name: "One Piece", color: "#d63b2f",
-    rar: ["Common (C)", "Uncommon (UC)", "Rare (R)", "Leader (L)", "Promo (P)", "Super Rare (SR)", "Alternate Art / Parallel",
-          "Special (SP)", "Secret Rare (SEC)", "Manga Rare", "Treasure Rare (TR)"],
-    hitFrom: "Super Rare (SR)",
-    price: q => "https://www.tcgplayer.com/search/all/product?q=" + q + "+one+piece" },
-  lorcana: { name: "Disney Lorcana", color: "#6b4fd8",
-    rar: ["Common", "Uncommon", "Rare", "Promo", "Super Rare", "Legendary", "Epic", "Enchanted", "Iconic"],
-    hitFrom: "Legendary",
-    price: q => "https://www.tcgplayer.com/search/all/product?q=" + q + "+lorcana" },
-};
-const CONDS = ["Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged", "Graded"];
-const RAR_PAL = ["#9aa0b8", "#59b36b", "#3d8fe0", "#8b5cf6", "#e0559b", "#f0a020", "#e6b800"];
-const rarIndex = c => { const g = GAMES[c.game]; return g ? g.rar.indexOf(c.rarity) : -1; };
-const isHit = c => { const g = GAMES[c.game]; return (g && rarIndex(c) >= g.rar.indexOf(g.hitFrom)) || c.cond === "Graded" || (c.photos && c.photos.length > 0); };
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Photo viewer"><img id="lb-img" alt=""><div class="cap" id="lb-cap"></div>
+  <div class="nav"><button class="btn ghost" id="lb-prev" aria-label="Previous photo">◀</button><button class="btn" id="lb-close">Close</button><button class="btn ghost" id="lb-next" aria-label="Next photo">▶</button></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-// ---------------------------------------------------------------- settings (this device)
-const THEMES = {
-  classic:  { name: "Classic",   bg: "#eef2fb", accent: "#3466af", dark: 0 },
-  pokeball: { name: "Poké Red",  bg: "#fdf0ef", accent: "#e53935", dark: 0 },
-  grass:    { name: "Grass",     bg: "#edf8ef", accent: "#2e9d57", dark: 0 },
-  ocean:    { name: "Ocean",     bg: "#e9f6fb", accent: "#1786ad", dark: 0 },
-  pirate:   { name: "Pirate",    bg: "#fff5e6", accent: "#c0392b", dark: 0 },
-  inkwell:  { name: "Inkwell",   bg: "#f5f1e8", accent: "#7a5c1e", dark: 0 },
-  candy:    { name: "Candy",     bg: "#fff0f7", accent: "#ff4f9a", dark: 0 },
-  midnight: { name: "Midnight",  bg: "#12141f", accent: "#8b7bff", dark: 1 },
-  galaxy:   { name: "Galaxy",    bg: "#0f1a2b", accent: "#21c7a8", dark: 1 },
-};
-const DEFAULTS = { theme: "classic", bg: "#eef2fb", accent: "#3466af", dark: 0, colorBy: "game", groupBy: "none", layout: "list",
-  tags: [{id: "t1", name: "Trade binder", color: "#ff7a59"}, {id: "t2", name: "For sale", color: "#1f9d55"}, {id: "t3", name: "Keep forever", color: "#8b5cf6"}],
-  games: ["pokemon", "onepiece", "lorcana"], gameColors: {}, condColors: {}, crop: 1, quality: 1200, camera: 0, cur: "$", title: "📒 Binder Buddy" };
-let S = {...DEFAULTS};
-try { S = {...DEFAULTS, ...JSON.parse(localStorage.getItem("bb-settings") || "{}")}; } catch (e) {}
-const saveS = () => { try { localStorage.setItem("bb-settings", JSON.stringify(S)); } catch (e) {} };
-const gameColor = g => (S.gameColors[g] || (GAMES[g] && GAMES[g].color) || "#999");
-const COND_COL = {"Near Mint": "#1f9d55", "Lightly Played": "#3d8fe0", "Moderately Played": "#e0a800", "Heavily Played": "#f07a24", "Damaged": "#e0413a", "Graded": "#8b5cf6"};
-const condColor = c => S.condColors[c] || COND_COL[c] || "#999";
-const money = n => S.cur + (Math.round((+n || 0) * 100) / 100).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-
-function mix(hex, other, k) {   // blend two hex colors
-  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-  const a = p(hex), b = p(other);
-  return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
-}
-const lum = hex => { const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
-function applyTheme() {
-  const r = document.documentElement.style, dark = +S.dark === 1;
-  r.setProperty("--bg", S.bg);
-  r.setProperty("--accent", S.accent);
-  r.setProperty("--accent-ink", lum(S.accent) > 0.6 ? "#1f2340" : "#ffffff");
-  r.setProperty("--surface", dark ? mix(S.bg, "#ffffff", 0.08) : "#ffffff");
-  r.setProperty("--ink", dark ? "#eef0ff" : "#1f2340");
-  r.setProperty("--soft", dark ? "#a9aecd" : "#5a5f84");
-  r.setProperty("--line", dark ? mix(S.bg, "#ffffff", 0.18) : mix(S.bg, "#9aa3c7", 0.25));
-  document.querySelector('meta[name="theme-color"]').content = S.accent;
-  $("appTitle").textContent = S.title || DEFAULTS.title;
-  document.body.classList.toggle("compact", S.layout === "compact");
-}
-
-// ---------------------------------------------------------------- storage: IndexedDB on this device
-let DB;
-function openDB() {
-  return new Promise((res, rej) => {
-    const r = indexedDB.open("binder-buddy", 1);
-    r.onupgradeneeded = () => { r.result.createObjectStore("cards", {keyPath: "id"}); r.result.createObjectStore("photos"); };
-    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
-  });
-}
-function tx(store, mode, fn) {
-  return new Promise((res, rej) => {
-    const t = DB.transaction(store, mode), s = t.objectStore(store), out = fn(s);
-    t.oncomplete = () => res(out && out.result !== undefined ? out.result : undefined); t.onerror = () => rej(t.error);
-  });
-}
-const putCard = c => tx("cards", "readwrite", s => s.put(c));
-const delCardDB = id => tx("cards", "readwrite", s => s.delete(id));
-const allCards = () => tx("cards", "readonly", s => s.getAll());
-const putPhoto = (id, blob) => tx("photos", "readwrite", s => s.put(blob, id));
-const getPhoto = id => tx("photos", "readonly", s => s.get(id));
-const delPhoto = id => tx("photos", "readwrite", s => s.delete(id));
-const urls = new Map();
-async function photoURL(id) {
-  if (urls.has(id)) return urls.get(id);
-  const b = await getPhoto(id); if (!b) return "";
-  const u = URL.createObjectURL(b); urls.set(id, u); return u;
-}
-const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-
-let cards = new Map();
-let filt = { game: "all", tag: "", hits: false };
-
-// ---------------------------------------------------------------- rendering
-function matches(c, words) {
-  const g = GAMES[c.game];
-  const hay = [c.name, c.set, c.num, c.rarity, c.notes, c.grade, c.lang, g ? g.name : "", ...(c.tags || []).map(t => (S.tags.find(x => x.id === t) || {}).name)].join(" ").toLowerCase();
-  return words.every(w => hay.includes(w));
-}
-function stripe(c) {
-  if (S.colorBy === "game") return gameColor(c.game);
-  if (S.colorBy === "condition") return condColor(c.cond);
-  if (S.colorBy === "rarity") { const g = GAMES[c.game], i = rarIndex(c); return i < 0 ? "transparent" : RAR_PAL[Math.min(6, Math.floor(i / g.rar.length * 7))]; }
-  if (S.colorBy === "tag") { const t = S.tags.find(x => (c.tags || []).includes(x.id)); return t ? t.color : "transparent"; }
-  return "transparent";
-}
-function groupKey(c) {
-  if (S.groupBy === "game") return [GAMES[c.game] ? GAMES[c.game].name : "Other", gameColor(c.game)];
-  if (S.groupBy === "set") return [c.set || "No set", ""];
-  if (S.groupBy === "rarity") return [c.rarity || "No rarity", stripe({...c, _: 0}) && S.colorBy === "rarity" ? stripe(c) : ""];
-  if (S.groupBy === "tag") { const t = S.tags.find(x => (c.tags || []).includes(x.id)); return t ? [t.name, t.color] : ["No tag", ""]; }
-  if (S.groupBy === "condition") return [c.cond, condColor(c.cond)];
-  return ["", ""];
-}
-const daysOld = c => c.priced ? (Date.now() - Date.parse(c.priced)) / 86400000 : 999;
-const priceLink = c => { const g = GAMES[c.game] || GAMES.pokemon; return g.price(encodeURIComponent([c.name, c.num].filter(Boolean).join(" ")).replace(/%20/g, "+")); };
-const condLabel = c => c.cond === "Graded" && c.grade ? c.grade : (c.cond || "Near Mint");
-
-function visible() {
-  const raw = $("q").value.trim().toLowerCase(), words = raw ? raw.split(/\s+/) : [];
-  let rows = [...cards.values()].filter(c => S.games.includes(c.game) || !GAMES[c.game]);
-  if (filt.game !== "all") rows = rows.filter(c => c.game === filt.game);
-  if (filt.tag) rows = rows.filter(c => (c.tags || []).includes(filt.tag));
-  if (filt.hits) rows = rows.filter(isHit);
-  if (words.length) rows = rows.filter(c => matches(c, words));
-  const s = $("sort").value;
-  rows.sort((a, b) => s === "value" ? (b.market * b.qty) - (a.market * a.qty)
-    : s === "new" ? String(b.added).localeCompare(String(a.added))
-    : s === "rarity" ? rarIndex(b) / ((GAMES[b.game] || {rar: [1]}).rar.length) - rarIndex(a) / ((GAMES[a.game] || {rar: [1]}).rar.length)
-    : s === "stale" ? daysOld(b) - daysOld(a)
-    : String(a.name).localeCompare(String(b.name)));
-  return rows;
-}
-
-function renderStats() {
-  let kinds = 0, qty = 0, val = 0, paid = 0;
-  const shown = [...cards.values()].filter(c => filt.game === "all" || c.game === filt.game);
-  for (const c of shown) { const n = +c.qty || 0; if (n > 0) kinds++; qty += n; val += n * (+c.market || 0); paid += n * (+c.paid || 0); }
-  $("s-kinds").textContent = kinds; $("s-qty").textContent = qty; $("s-val").textContent = money(val);
-  const g = val - paid; $("s-gain").textContent = (g >= 0 ? "+" : "−") + money(Math.abs(g)); $("s-gain").style.color = g >= 0 ? "var(--ok)" : "var(--bad)";
-}
-function renderChips() {
-  const games = Object.keys(GAMES).filter(g => S.games.includes(g));
-  $("gameChips").innerHTML = (games.length > 1 ? `<button class="fchip ${filt.game === "all" ? "on" : ""}" data-g="all">All games</button>` : "") +
-    games.map(g => `<button class="fchip ${filt.game === g ? "on" : ""}" data-g="${g}"><i style="background:${gameColor(g)}"></i>${GAMES[g].name}</button>`).join("");
-  $("tagFilter").innerHTML = `<option value="">All tags</option>` + S.tags.map(t => `<option value="${t.id}" ${filt.tag === t.id ? "selected" : ""}>${esc(t.name)}</option>`).join("");
-  $("hitsBtn").classList.toggle("ok", filt.hits); $("hitsBtn").classList.toggle("ghost", !filt.hits);
-}
-
-let renderToken = 0;
-async function render() {
-  renderStats(); renderChips();
-  const rows = visible(), out = $("out"), token = ++renderToken;
-  if (!cards.size) { out.innerHTML = `<div class="empty">Your binder is empty.<br>Tap <b>+ Add a card</b> to start, or 🎨 to make it yours.</div>`; return; }
-  if (!rows.length) { out.innerHTML = `<div class="empty">No cards match.</div>`; return; }
-  // group
-  const groups = new Map();
-  for (const c of rows) { const [k, col] = groupKey(c); if (!groups.has(k)) groups.set(k, {col, items: []}); groups.get(k).items.push(c); }
-  const grid = S.layout === "grid";
-  let html = "";
-  for (const [k, g] of groups) {
-    if (k) html += `<div class="grouph">${g.col ? `<i style="background:${g.col}"></i>` : ""}${esc(k)} <small>${g.items.reduce((s, c) => s + (+c.qty || 0), 0)} cards · ${money(g.items.reduce((s, c) => s + (+c.qty || 0) * (+c.market || 0), 0))}</small></div>`;
-    html += `<div class="${grid ? "grid" : "list"}">` + g.items.map(c => grid ? gridCard(c) : listCard(c)).join("") + `</div>`;
-  }
-  out.innerHTML = html;
-  // fill photos
-  for (const img of out.querySelectorAll("img[data-ph]")) {
-    const u = await photoURL(img.dataset.ph); if (token !== renderToken) return; if (u) img.src = u;
-  }
-}
-function tagsHTML(c) {
-  return (c.tags || []).map(t => S.tags.find(x => x.id === t)).filter(Boolean).map(t => `<span class="tag" style="background:${t.color}">${esc(t.name)}</span>`).join("");
-}
-function listCard(c) {
-  const n = +c.qty || 0, each = +c.market || 0, gain = (each - (+c.paid || 0)) * n, pic = c.photos && c.photos[0], old = daysOld(c);
-  return `<div class="card${pic ? " withpic" : ""}" data-id="${c.id}" style="--stripe:${stripe(c)}">
-    ${pic ? `<img class="thumb" data-ph="${pic}" data-a="zoom" alt="">` : ""}
-    <div><div class="nm">${esc(c.name)}</div>
-      <div class="meta">${esc([S.games.length > 1 && GAMES[c.game] ? GAMES[c.game].name : "", c.set, c.num].filter(Boolean).join(" · "))}</div>
-      <div class="meta">${c.rarity ? `<span class="tag soft">${esc(c.rarity)}</span>` : ""}<span class="tag" style="background:${condColor(c.cond)}">${esc(condLabel(c))}</span>${c.lang && c.lang !== "English" ? `<span class="tag soft">${esc(c.lang)}</span>` : ""}${tagsHTML(c)}</div></div>
-    <div class="qty"><button data-a="minus" aria-label="One less">−</button><b>${n}</b><button data-a="plus" aria-label="One more">+</button></div>
-    <div class="money">
-      <span>${money(each)} each · <b>${money(each * n)}</b></span>
-      ${c.paid !== "" && c.paid != null ? `<span class="${gain >= 0 ? "up" : "down"}">${gain >= 0 ? "▲ +" : "▼ −"}${money(Math.abs(gain))}</span>` : ""}
-      ${old > 30 ? `<span class="stale">${old > 900 ? "no price yet" : "price " + Math.round(old) + " days old"}</span>` : ""}
-      <a href="${priceLink(c)}" target="_blank" rel="noopener">Check price ↗</a>
-      <button data-a="edit">Edit</button>
-    </div></div>`;
-}
-function gridCard(c) {
-  const pic = c.photos && c.photos[0];
-  return `<div class="gcard" data-id="${c.id}" style="--stripe:${stripe(c)}">
-    ${pic ? `<img data-ph="${pic}" data-a="zoom" alt="${esc(c.name)}">` : `<div class="nopic" data-a="edit">No photo<br>tap to add</div>`}
-    <b>${esc(c.name)}</b><span>${esc(c.rarity || condLabel(c))}</span><br><span>${money(c.market)}${(+c.qty || 0) > 1 ? " × " + c.qty : ""}</span></div>`;
-}
-
-// "Do I have it?"
-function answer() {
-  const raw = $("q").value.trim(), box = $("answer");
-  render();
-  if (!raw) { box.className = "answer"; return; }
-  const words = raw.toLowerCase().split(/\s+/);
-  const hits = [...cards.values()].filter(c => matches(c, words) && (+c.qty || 0) > 0);
-  if (hits.length) {
-    const total = hits.reduce((s, c) => s + (+c.qty || 0), 0);
-    box.className = "answer yes";
-    box.innerHTML = `<span class="big">YES! You have ${total}</span>` + hits.slice(0, 6).map(c =>
-      `<div class="hit">${c.photos && c.photos[0] ? `<img data-ph="${c.photos[0]}" alt="">` : "•"}<span>${c.qty} × ${esc(c.name)}${c.set ? " (" + esc(c.set) + (c.num ? " " + esc(c.num) : "") + ")" : ""}: ${esc(condLabel(c))}, ${money(c.market)} each</span></div>`).join("") +
-      (hits.length > 6 ? `<div class="hit">…and ${hits.length - 6} more below</div>` : "");
-    box.querySelectorAll("img[data-ph]").forEach(async img => { img.src = await photoURL(img.dataset.ph); });
-  } else {
-    box.className = "answer no";
-    const g = filt.game !== "all" ? filt.game : (S.games[0] || "pokemon");
-    box.innerHTML = `<span class="big">NO, not in your binder</span><div class="hit">Want it? <a href="${priceLink({game: g, name: raw})}" target="_blank" rel="noopener">See what it costs ↗</a></div>`;
-  }
-}
-$("q").addEventListener("input", answer);
-$("sort").addEventListener("change", render);
-$("tagFilter").addEventListener("change", e => { filt.tag = e.target.value; render(); });
-$("hitsBtn").onclick = () => { filt.hits = !filt.hits; render(); };
-$("gameChips").addEventListener("click", e => { const b = e.target.closest("[data-g]"); if (b) { filt.game = b.dataset.g; render(); } });
-
-// list clicks
-$("out").addEventListener("click", e => {
-  const el = e.target.closest("[data-a]"), host = e.target.closest("[data-id]");
-  if (!host) return;
-  const id = host.dataset.id, a = el ? el.dataset.a : (host.classList.contains("gcard") ? "open" : "");
-  if (a === "zoom") openLB(id, 0);
-  else if (a === "plus") bumpQty(id, 1);
-  else if (a === "minus") bumpQty(id, -1);
-  else if (a === "edit" || a === "open") openEdit(id);
-});
-const qtyTimers = new Map();
-function bumpQty(id, d) {
-  const c = cards.get(id); if (!c) return;
-  c.qty = Math.max(0, (+c.qty || 0) + d); render();
-  clearTimeout(qtyTimers.get(id));
-  qtyTimers.set(id, setTimeout(() => putCard(c), 400));
-}
-
-// ---------------------------------------------------------------- photo viewer
-let lb = {id: null, i: 0};
-async function openLB(id, i) {
-  const c = cards.get(id); if (!c || !c.photos || !c.photos.length) return;
-  lb = {id, i: (i + c.photos.length) % c.photos.length};
-  $("lb-img").src = await photoURL(c.photos[lb.i]);
-  $("lb-cap").innerHTML = `${esc(c.name)}${c.rarity ? " · " + esc(c.rarity) : ""}<br>${esc(condLabel(c))} · ${money(c.market)}` +
-    (c.photos.length > 1 ? `<br>photo ${lb.i + 1} of ${c.photos.length}` : "");
-  $("lb-prev").style.visibility = $("lb-next").style.visibility = c.photos.length > 1 ? "visible" : "hidden";
-  $("lb").classList.add("open");
-}
-$("lb-close").onclick = () => $("lb").classList.remove("open");
-$("lb").addEventListener("click", e => { if (e.target.id === "lb") $("lb").classList.remove("open"); });
-$("lb-prev").onclick = () => openLB(lb.id, lb.i - 1);
-$("lb-next").onclick = () => openLB(lb.id, lb.i + 1);
-
-// ---------------------------------------------------------------- add / edit
-let editing = null, form = null, delArmed = false;
-function openEdit(id) {
-  editing = id || null; delArmed = false;
-  const base = {game: filt.game !== "all" ? filt.game : (S.games[0] || "pokemon"), name: "", set: "", num: "", rarity: "", lang: "English",
-    cond: "Near Mint", grade: "", qty: 1, paid: "", market: "", notes: "", tags: filt.tag ? [filt.tag] : [], photos: []};
-  const c = id ? cards.get(id) : base;
-  form = {game: c.game, photos: [...(c.photos || [])], tags: [...(c.tags || [])], newPhotos: [], removed: [], uploading: 0};
-  $("m-title").textContent = id ? "Edit card" : "Add a card";
-  $("f-name").value = c.name || ""; $("f-set").value = c.set || ""; $("f-num").value = c.num || "";
-  $("f-lang").value = c.lang || "English"; $("f-cond").value = c.cond || "Near Mint"; $("f-grade").value = c.grade || "";
-  $("f-qty").value = c.qty ?? 1; $("f-paid").value = c.paid ?? ""; $("f-mkt").value = c.market ?? ""; $("f-notes").value = c.notes || "";
-  drawGameSeg(); fillRarity(c.rarity); drawTags(); drawPhotos();
-  $("f-del").style.display = id ? "" : "none"; $("f-del").textContent = "Delete"; $("f-msg").textContent = "";
-  syncForm(); $("m-edit").classList.add("open");
-}
-function drawGameSeg() {
-  $("f-game").innerHTML = Object.keys(GAMES).filter(g => S.games.includes(g) || g === form.game).map(g =>
-    `<button data-g="${g}" class="${form.game === g ? "on" : ""}">${GAMES[g].name}</button>`).join("");
-}
-$("f-game").addEventListener("click", e => { const b = e.target.closest("[data-g]"); if (!b) return; form.game = b.dataset.g; drawGameSeg(); fillRarity(""); syncForm(); });
-function fillRarity(v) {
-  const g = GAMES[form.game];
-  $("f-rar").innerHTML = `<option value="">(not set)</option>` + g.rar.map(r => `<option ${r === v ? "selected" : ""}>${esc(r)}</option>`).join("") + `<option ${v === "Other" ? "selected" : ""}>Other</option>`;
-}
-function drawTags() {
-  $("f-tags").innerHTML = S.tags.length ? S.tags.map(t => `<button data-t="${t.id}" class="${form.tags.includes(t.id) ? "on" : ""}" style="background:${t.color}">${esc(t.name)}</button>`).join("")
-    : `<span class="note">Make tags in 🎨 Customize.</span>`;
-}
-$("f-tags").addEventListener("click", e => {
-  const b = e.target.closest("[data-t]"); if (!b) return;
-  const t = b.dataset.t; form.tags = form.tags.includes(t) ? form.tags.filter(x => x !== t) : [...form.tags, t]; drawTags();
-});
-function syncForm() {
-  $("gradeBox").style.visibility = $("f-cond").value === "Graded" ? "visible" : "hidden";
-  $("f-look").href = priceLink({game: form.game, name: $("f-name").value || GAMES[form.game].name, num: $("f-num").value});
-}
-["f-name", "f-num", "f-cond"].forEach(id => $(id).addEventListener("input", syncForm));
-
-async function drawPhotos() {
-  const box = $("f-photos");
-  const items = await Promise.all(form.photos.map(async (id, i) => `<div class="ph${i === 0 ? " cover" : ""}"><img src="${await photoURL(id)}" alt="">
-      <button class="x" data-i="${i}" aria-label="Remove photo">×</button><button class="r" data-i="${i}" aria-label="Rotate">⟳</button>
-      ${i > 0 ? `<button class="c" data-i="${i}" aria-label="Make cover photo">★</button>` : ""}</div>`));
-  box.innerHTML = items.join("") + (form.uploading ? `<div class="addph">Adding…</div>` : "") +
-    (form.photos.length + form.uploading < 6 ? `<div class="addph" id="ph-add">📷<br>Add photo</div>` : "");
-  const add = $("ph-add");
-  if (add) add.onclick = () => { const f = $("f-file"); if (+S.camera) f.setAttribute("capture", "environment"); else f.removeAttribute("capture"); f.click(); };
-}
-$("f-photos").addEventListener("click", async e => {
-  const b = e.target.closest("button"); if (!b) return;
-  const i = +b.dataset.i;
-  if (b.classList.contains("x")) { form.removed.push(form.photos[i]); form.photos.splice(i, 1); }
-  if (b.classList.contains("c")) { const [p] = form.photos.splice(i, 1); form.photos.unshift(p); }
-  if (b.classList.contains("r")) {
-    const old = form.photos[i], blob = await getPhoto(old);
-    const rotated = await rotate(blob), nid = newId("p");
-    await putPhoto(nid, rotated); form.newPhotos.push(nid); form.removed.push(old); form.photos[i] = nid;
-  }
-  drawPhotos();
-});
-function loadImg(blob) {
-  return new Promise((res, rej) => { const u = URL.createObjectURL(blob), im = new Image(); im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = () => { URL.revokeObjectURL(u); rej(); }; im.src = u; });
-}
-const toJpeg = cv => new Promise(r => cv.toBlob(r, "image/jpeg", 0.86));
-async function prepPhoto(file) {
-  const im = await loadImg(file);
-  let sx = 0, sy = 0, sw = im.width, sh = im.height;
-  if (+S.crop) {   // center-crop to a trading card's 5:7 shape (or 7:5 if the photo is sideways)
-    const want = im.width > im.height ? 7 / 5 : 5 / 7;
-    if (sw / sh > want) { sw = sh * want; sx = (im.width - sw) / 2; } else { sh = sw / want; sy = (im.height - sh) / 2; }
-  }
-  const k = Math.min(1, (+S.quality || 1200) / Math.max(sw, sh));
-  const cv = document.createElement("canvas"); cv.width = Math.round(sw * k); cv.height = Math.round(sh * k);
-  cv.getContext("2d").drawImage(im, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
-  return toJpeg(cv);
-}
-async function rotate(blob) {
-  const im = await loadImg(blob), cv = document.createElement("canvas");
-  cv.width = im.height; cv.height = im.width;
-  const g = cv.getContext("2d"); g.translate(cv.width, 0); g.rotate(Math.PI / 2); g.drawImage(im, 0, 0);
-  return toJpeg(cv);
-}
-$("f-file").addEventListener("change", async e => {
-  const files = [...e.target.files].slice(0, 6 - form.photos.length); e.target.value = "";
-  for (const f of files) {
-    form.uploading++; drawPhotos();
-    try { const b = await prepPhoto(f), id = newId("p"); await putPhoto(id, b); form.photos.push(id); form.newPhotos.push(id); }
-    catch (err) { $("f-msg").textContent = "Couldn't read that photo. Try a different one."; }
-    form.uploading--; drawPhotos();
-  }
-});
-async function dropPhotos(ids) { for (const id of ids) { try { await delPhoto(id); } catch (e) {} if (urls.has(id)) { URL.revokeObjectURL(urls.get(id)); urls.delete(id); } } }
-
-$("addBtn").onclick = () => openEdit(null);
-$("f-cancel").onclick = () => { dropPhotos(form.newPhotos); $("m-edit").classList.remove("open"); };
-$("f-save").onclick = async () => {
-  const name = $("f-name").value.trim();
-  if (!name) { $("f-msg").textContent = "Give the card a name first."; return; }
-  if (form.uploading) { $("f-msg").textContent = "Wait for the photo to finish."; return; }
-  const old = editing ? cards.get(editing) : null;
-  const market = $("f-mkt").value === "" ? "" : +$("f-mkt").value;
-  const c = { id: editing || newId("c"), game: form.game, name, set: $("f-set").value.trim(), num: $("f-num").value.trim(),
-    rarity: $("f-rar").value, lang: $("f-lang").value, cond: $("f-cond").value, grade: $("f-cond").value === "Graded" ? $("f-grade").value.trim() : "",
-    qty: Math.max(0, Math.round(+$("f-qty").value || 0)), paid: $("f-paid").value === "" ? "" : +$("f-paid").value, market,
-    notes: $("f-notes").value.trim(), tags: form.tags, photos: form.photos,
-    added: old ? old.added : new Date().toISOString(),
-    priced: market === "" ? (old ? old.priced : "") : (old && +old.market === market && old.priced ? old.priced : new Date().toISOString()) };
-  cards.set(c.id, c); await putCard(c);
-  await dropPhotos(form.removed.filter(id => !form.photos.includes(id)));
-  $("m-edit").classList.remove("open"); answer(); toast(old ? "Saved" : "Added to your binder");
-};
-$("f-del").onclick = async () => {
-  if (!delArmed) { delArmed = true; $("f-del").textContent = "Tap again to delete"; return; }
-  const c = cards.get(editing);
-  cards.delete(editing); await delCardDB(editing);
-  await dropPhotos([...(c.photos || []), ...form.newPhotos]);
-  $("m-edit").classList.remove("open"); answer(); toast("Deleted");
-};
-
-// ---------------------------------------------------------------- customize
-function seg(el, opts, cur, onPick) {
-  el.innerHTML = opts.map(([v, l]) => `<button data-v="${v}" class="${String(cur) === String(v) ? "on" : ""}">${l}</button>`).join("");
-  el.onclick = e => { const b = e.target.closest("[data-v]"); if (b) onPick(b.dataset.v); };
-}
-function drawSettings() {
-  $("themes").innerHTML = Object.entries(THEMES).map(([k, t]) => `<div class="theme ${S.theme === k ? "on" : ""}" data-k="${k}">
-    <div class="sw" style="background:linear-gradient(135deg,${t.accent} 0 45%,${t.bg} 45%)"></div>${t.name}</div>`).join("") +
-    `<div class="theme ${S.theme === "custom" ? "on" : ""}" data-k="custom"><div class="sw" style="background:conic-gradient(#f44,#fc0,#4c4,#0cf,#a4f,#f44)"></div>My own</div>`;
-  $("c-bg").value = S.bg; $("c-accent").value = S.accent; $("c-dark").value = String(S.dark);
-  seg($("colorBy"), [["game", "Game"], ["rarity", "Rarity"], ["condition", "Condition"], ["tag", "Tag"], ["none", "No colors"]], S.colorBy, v => { S.colorBy = v; changed(); });
-  seg($("groupBy"), [["none", "Don't group"], ["game", "Game"], ["set", "Set"], ["rarity", "Rarity"], ["condition", "Condition"], ["tag", "Tag"]], S.groupBy, v => { S.groupBy = v; changed(); });
-  seg($("layout"), [["list", "List"], ["compact", "Compact list"], ["grid", "Photo grid"]], S.layout, v => { S.layout = v; changed(); });
-  seg($("gamesOn"), Object.entries(GAMES).map(([k, g]) => [k, (S.games.includes(k) ? "✓ " : "") + g.name]), "", v => {
-    S.games = S.games.includes(v) ? S.games.filter(x => x !== v) : [...S.games, v];
-    if (!S.games.length) S.games = [v];
-    if (!S.games.includes(filt.game)) filt.game = "all";
-    changed();
-  });
-  // color editors for the chosen color-coding
-  let ed = "";
-  if (S.colorBy === "game") ed = Object.entries(GAMES).map(([k, g]) => `<div class="colrow"><span>${g.name}</span><input type="color" data-gc="${k}" value="${gameColor(k)}"></div>`).join("");
-  if (S.colorBy === "condition") ed = CONDS.map(c => `<div class="colrow"><span>${c}</span><input type="color" data-cc="${c}" value="${condColor(c)}"></div>`).join("");
-  if (S.colorBy === "rarity") ed = `<p class="note">Rarer cards get warmer colors: grey → green → blue → purple → pink → orange → gold.</p>`;
-  if (S.colorBy === "tag") ed = `<p class="note">Each card uses its first tag's color. Change tag colors below.</p>`;
-  $("colorEditors").innerHTML = ed;
-  $("tagList").innerHTML = S.tags.map(t => `<div class="colrow"><input type="color" data-tc="${t.id}" value="${t.color}" style="width:52px"><input data-tn="${t.id}" value="${esc(t.name)}"><button class="btn ghost" data-tdel="${t.id}">✕</button></div>`).join("");
-  $("p-crop").value = String(S.crop); $("p-q").value = String(S.quality); $("p-cam").value = String(S.camera); $("cur").value = S.cur; $("titleIn").value = S.title;
-}
-function changed() { saveS(); applyTheme(); drawSettings(); render(); }
-$("openSettings").onclick = () => { drawSettings(); storageInfo(); $("m-set").classList.add("open"); };
-$("setDone").onclick = () => $("m-set").classList.remove("open");
-$("themes").onclick = e => {
-  const t = e.target.closest("[data-k]"); if (!t) return;
-  S.theme = t.dataset.k;
-  if (THEMES[S.theme]) Object.assign(S, {bg: THEMES[S.theme].bg, accent: THEMES[S.theme].accent, dark: THEMES[S.theme].dark});
-  changed();
-};
-$("c-bg").oninput = e => { S.bg = e.target.value; S.theme = "custom"; saveS(); applyTheme(); };
-$("c-accent").oninput = e => { S.accent = e.target.value; S.theme = "custom"; saveS(); applyTheme(); };
-$("c-bg").onchange = $("c-accent").onchange = () => changed();
-$("c-dark").onchange = e => { S.dark = +e.target.value; S.theme = "custom"; changed(); };
-$("colorEditors").addEventListener("input", e => {
-  if (e.target.dataset.gc) S.gameColors[e.target.dataset.gc] = e.target.value;
-  if (e.target.dataset.cc) S.condColors[e.target.dataset.cc] = e.target.value;
-  saveS(); render();
-});
-$("tagList").addEventListener("input", e => {
-  const t = S.tags.find(x => x.id === (e.target.dataset.tc || e.target.dataset.tn)); if (!t) return;
-  if (e.target.dataset.tc) t.color = e.target.value; else t.name = e.target.value.slice(0, 24);
-  saveS(); render();
-});
-$("tagList").addEventListener("click", e => {
-  const id = e.target.dataset.tdel; if (!id) return;
-  S.tags = S.tags.filter(t => t.id !== id); if (filt.tag === id) filt.tag = ""; changed();
-});
-$("addTag").onclick = () => {
-  const n = $("newTag").value.trim(); if (!n) return;
-  S.tags.push({id: newId("t"), name: n.slice(0, 24), color: $("newTagCol").value}); $("newTag").value = ""; changed();
-};
-$("p-crop").onchange = e => { S.crop = +e.target.value; saveS(); };
-$("p-q").onchange = e => { S.quality = +e.target.value; saveS(); };
-$("p-cam").onchange = e => { S.camera = +e.target.value; saveS(); };
-$("cur").onchange = e => { S.cur = e.target.value; changed(); };
-$("titleIn").oninput = e => { S.title = e.target.value || DEFAULTS.title; saveS(); applyTheme(); };
-
-async function storageInfo() {
-  try {
-    if (navigator.storage && navigator.storage.estimate) {
-      const est = await navigator.storage.estimate();
-      $("storageNote").textContent = `Using ${(est.usage / 1048576).toFixed(1)} MB on this device.`;
-    }
-  } catch (e) {}
-}
-
-// ---------------------------------------------------------------- backup / spreadsheet / bulk add
-const b64 = blob => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
-$("exportBtn").onclick = async () => {
-  toast("Making your backup…");
-  const photos = {};
-  for (const c of cards.values()) for (const id of c.photos || []) { const b = await getPhoto(id); if (b) photos[id] = await b64(b); }
-  const data = JSON.stringify({app: "binder-buddy", version: 1, saved: new Date().toISOString(), settings: S, cards: [...cards.values()], photos});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([data], {type: "application/json"}));
-  a.download = "binder-buddy-backup-" + new Date().toISOString().slice(0, 10) + ".json";
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  toast("Backup saved to your downloads");
-};
-$("importBtn").onclick = () => $("importFile").click();
-$("importFile").onchange = async e => {
-  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-  try {
-    const d = JSON.parse(await f.text());
-    if (d.app !== "binder-buddy" || !Array.isArray(d.cards)) throw new Error("not a backup");
-    for (const [id, url] of Object.entries(d.photos || {})) { const blob = await (await fetch(url)).blob(); await putPhoto(id, blob); }
-    for (const c of d.cards) if (c && c.id && c.name) { cards.set(c.id, c); await putCard(c); }
-    if (d.settings) { S = {...DEFAULTS, ...d.settings}; saveS(); applyTheme(); drawSettings(); }
-    render(); toast(`Loaded ${d.cards.length} cards from your backup`);
-  } catch (err) { toast("That file isn't a Binder Buddy backup."); }
-};
-$("csvBtn").onclick = async () => {
-  const head = ["Game", "Name", "Set", "Number", "Rarity", "Language", "Condition", "Quantity", "Paid each", "Market each", "Market total", "Tags", "Notes"].join("\t");
-  const rows = [...cards.values()].sort((a, b) => String(a.name).localeCompare(String(b.name))).map(c =>
-    [GAMES[c.game] ? GAMES[c.game].name : c.game, c.name, c.set, c.num, c.rarity, c.lang, condLabel(c), c.qty, c.paid, c.market,
-     ((+c.market || 0) * (+c.qty || 0)).toFixed(2), (c.tags || []).map(t => (S.tags.find(x => x.id === t) || {}).name).filter(Boolean).join(", "), c.notes]
-      .map(v => String(v ?? "").replace(/[\t\n]/g, " ")).join("\t"));
-  try { await navigator.clipboard.writeText([head, ...rows].join("\n")); toast("Copied! Paste into Google Sheets or Excel."); }
-  catch (e) { toast("Couldn't copy on this device."); }
-};
-$("bulkBtn").onclick = () => { $("m-set").classList.remove("open"); $("bulkText").value = ""; $("bulkMsg").textContent = ""; $("m-bulk").classList.add("open"); };
-$("bulkCancel").onclick = () => $("m-bulk").classList.remove("open");
-function guessRarity(game, txt) {
-  if (!txt) return "";
-  const t = txt.toLowerCase(), list = GAMES[game].rar;
-  return list.find(r => r.toLowerCase() === t) || list.find(r => r.toLowerCase().includes("(" + t + ")")) || list.find(r => r.toLowerCase().startsWith(t)) || "Other";
-}
-$("bulkGo").onclick = async () => {
-  let n = 0;
-  for (const line of $("bulkText").value.split(/\n/)) {
-    const p = line.split(/\t|,/).map(s => s.trim());
-    if (p.length < 2 || !p[1]) continue;
-    const gk = p[0].toLowerCase().replace(/[^a-z]/g, "");
-    const game = gk.startsWith("one") ? "onepiece" : gk.startsWith("lor") ? "lorcana" : gk.startsWith("pok") ? "pokemon" : null;
-    if (!game) continue;
-    const condTxt = p[5] || "";
-    const cond = CONDS.find(c => c.toLowerCase() === condTxt.toLowerCase()) || (/^(psa|bgs|cgc|sgc)/i.test(condTxt) ? "Graded" : "Near Mint");
-    const c = { id: newId("c"), game, name: p[1], set: p[2] || "", num: p[3] || "", rarity: guessRarity(game, p[4]), lang: "English", cond,
-      grade: cond === "Graded" ? condTxt : "", qty: p[6] ? Math.max(0, Math.round(+p[6] || 0)) : 1, paid: p[7] ? +p[7] || 0 : "",
-      market: p[8] ? +p[8] || 0 : "", notes: "", tags: [], photos: [], added: new Date().toISOString(), priced: p[8] ? new Date().toISOString() : "" };
-    cards.set(c.id, c); await putCard(c); n++;
-  }
-  $("bulkMsg").textContent = n ? `Added ${n} card${n > 1 ? "s" : ""}!` : "Nothing added. Check each line starts with pokemon, onepiece or lorcana.";
-  render(); if (n) setTimeout(() => $("m-bulk").classList.remove("open"), 900);
-};
-
-// ---------------------------------------------------------------- bundle value
-function bundleRows() {
-  const min = +$("bd-min").value || 0;
-  return visible().filter(c => (+c.qty || 0) > 0 && (+c.market || 0) >= min);
-}
-function drawBundle() {
-  const pct = +$("bd-pct").value; $("bd-pctl").textContent = pct;
-  seg($("bd-quick"), [[60, "60%"], [70, "70%"], [80, "80%"], [90, "90%"], [100, "Full market"]], pct, v => { $("bd-pct").value = v; drawBundle(); });
-  const rows = bundleRows();
-  const count = rows.reduce((s, c) => s + (+c.qty || 0), 0), mkt = rows.reduce((s, c) => s + (+c.qty || 0) * (+c.market || 0), 0);
-  const paid = rows.reduce((s, c) => s + (+c.qty || 0) * (+c.paid || 0), 0), ask = mkt * pct / 100;
-  const noPrice = rows.filter(c => c.market === "" || c.market == null).length;
-  $("bd-out").innerHTML = `<div class="stats" style="margin:0">
-      <div class="stat"><b>${count}</b><span>cards</span></div>
-      <div class="stat"><b>${money(mkt)}</b><span>full market</span></div>
-      <div class="stat"><b style="color:var(--ok)">${money(ask)}</b><span>bundle price at ${pct}%</span></div>
-      <div class="stat"><b style="color:${ask - paid >= 0 ? "var(--ok)" : "var(--bad)"}">${ask - paid >= 0 ? "+" : "−"}${money(Math.abs(ask - paid))}</b><span>vs. what you paid</span></div></div>
-    ${noPrice ? `<p class="note">⚠ ${noPrice} card${noPrice > 1 ? "s have" : " has"} no market price yet, so they count as ${money(0)}.</p>` : ""}`;
-}
-$("bundleBtn").onclick = () => { drawBundle(); $("m-bundle").classList.add("open"); };
-$("bd-pct").oninput = drawBundle; $("bd-min").oninput = drawBundle;
-$("bd-close").onclick = () => $("m-bundle").classList.remove("open");
-$("bd-copy").onclick = async () => {
-  const pct = +$("bd-pct").value, rows = bundleRows();
-  const mkt = rows.reduce((s, c) => s + (+c.qty || 0) * (+c.market || 0), 0);
-  const text = rows.map(c => `${c.qty}x ${c.name}${c.set ? " (" + c.set + (c.num ? " " + c.num : "") + ")" : ""} ${condLabel(c)}: ${money(c.market)}`).join("\n") +
-    `\n\nMarket total: ${money(mkt)}\nBundle price: ${money(mkt * pct / 100)}`;
-  try { await navigator.clipboard.writeText(text); toast("Copied! Paste it in a message or post."); } catch (e) { toast("Couldn't copy on this device."); }
-};
-
-// close sheets by tapping outside
-document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e => { if (e.target === m && m.id !== "m-edit") m.classList.remove("open"); }));
-
-// ---------------------------------------------------------------- start
-(async () => {
-  applyTheme();
-  try {
-    DB = await openDB();
-    (await allCards()).forEach(c => cards.set(c.id, c));
-    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-  } catch (e) { $("out").innerHTML = `<div class="empty">This browser can't save cards (private mode?). Try a normal browser window.</div>`; return; }
-  render();
-  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
-})();
-</script>
+<script type="module" src="js/app.js"></script>
 </body>
 </html>

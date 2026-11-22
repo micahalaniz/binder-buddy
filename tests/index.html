@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Binder Buddy unit tests</title>
+<style>body{font:15px/1.5 system-ui;margin:24px} .pass{color:#1a8a4a} .fail{color:#d23a33;font-weight:700} h1{font-size:22px}</style></head>
+<body><h1>Binder Buddy unit tests</h1><div id="out"></div>
+<script type="module">
+// Zero-dependency test runner for the pure logic in js/logic.js. Open this page in any browser.
+import * as L from "../js/logic.js";
+const results = [];
+const test = (name, fn) => { try { fn(); results.push({name, ok: true}); } catch (e) { results.push({name, ok: false, err: e.message}); } };
+const eq = (a, b, msg = "") => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${msg} expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); };
+
+test("Pokémon rarities from TCGdex map to our names", () => {
+  eq(L.mapRarity("pokemon", "Special illustration rare"), "Special Illustration Rare (SIR)");
+  eq(L.mapRarity("pokemon", "Illustration rare"), "Illustration Rare (IR)");
+  eq(L.mapRarity("pokemon", "Double rare"), "Double Rare (ex)");
+  eq(L.mapRarity("pokemon", "Hyper rare"), "Hyper Rare (Gold)");
+  eq(L.mapRarity("pokemon", "Mega Hyper Rare"), "Mega Hyper Rare");
+  eq(L.mapRarity("pokemon", "Uncommon"), "Uncommon");
+  eq(L.mapRarity("pokemon", "Common"), "Common");
+  eq(L.mapRarity("pokemon", "Rare Holo"), "Holo Rare");
+  eq(L.mapRarity("pokemon", "ACE SPEC Rare"), "ACE SPEC");
+  eq(L.mapRarity("pokemon", "None"), "");
+});
+test("One Piece rarities use the card name for parallels and manga", () => {
+  eq(L.mapRarity("onepiece", "SEC", "Shanks"), "Secret Rare (SEC)");
+  eq(L.mapRarity("onepiece", "SR", "Monkey.D.Luffy (024) (Parallel)"), "Alternate Art / Parallel");
+  eq(L.mapRarity("onepiece", "SEC", "Shanks (Parallel) (Manga) (Alternate Art)"), "Manga Rare");
+  eq(L.mapRarity("onepiece", "L", "Luffy"), "Leader (L)");
+  eq(L.mapRarity("onepiece", "TR", "Zoro"), "Treasure Rare (TR)");
+});
+test("Lorcana rarities", () => {
+  eq(L.mapRarity("lorcana", "Super_rare"), "Super Rare");
+  eq(L.mapRarity("lorcana", "Enchanted"), "Enchanted");
+  eq(L.mapRarity("lorcana", "Iconic"), "Iconic");
+});
+test("hits: rarity threshold, graded, or has my photo", () => {
+  eq(L.isHit({game: "pokemon", rarity: "Ultra Rare"}), true);
+  eq(L.isHit({game: "pokemon", rarity: "Holo Rare"}), false);
+  eq(L.isHit({game: "pokemon", rarity: "Common", cond: "Graded"}), true);
+  eq(L.isHit({game: "lorcana", rarity: "Rare", photos: ["p1"]}), true);
+  eq(L.isHit({game: "onepiece", rarity: "Super Rare (SR)"}), true);
+});
+test("guessRarity understands short codes", () => {
+  eq(L.guessRarity("pokemon", "SIR"), "Special Illustration Rare (SIR)");
+  eq(L.guessRarity("onepiece", "sec"), "Secret Rare (SEC)");
+  eq(L.guessRarity("lorcana", "enchanted"), "Enchanted");
+  eq(L.guessRarity("pokemon", "banana"), "Other");
+});
+test("fair price: singles vs market", () => {
+  eq(L.priceVerdict(80, 100).key, "steal");
+  eq(L.priceVerdict(100, 100).key, "fair");
+  eq(L.priceVerdict(125, 100).key, "high");
+  eq(L.priceVerdict(200, 100).key, "scalper");
+  eq(L.priceVerdict(0, 100), null);
+  eq(L.priceVerdict(10, ""), null);
+});
+test("fair price: sealed vs store price", () => {
+  eq(L.priceVerdict(49.99, 49.99, "sealed").key, "steal");
+  eq(L.priceVerdict(54.99, 49.99, "sealed").key, "fair");
+  eq(L.priceVerdict(69.99, 49.99, "sealed").key, "high");
+  eq(L.priceVerdict(89.99, 49.99, "sealed").key, "scalper");
+});
+test("trade verdicts", () => {
+  eq(L.tradeVerdict([{value: 100}], [{value: 103}]).key, "fair");
+  eq(L.tradeVerdict([{value: 100}], [{value: 150}]).key, "ahead");
+  eq(L.tradeVerdict([{value: 100, qty: 2}], [{value: 150}]).key, "behind");
+  eq(L.tradeVerdict([], [{value: 5}]).key, "empty");
+  eq(Math.round(L.tradeVerdict([{value: 279.37}], [{value: 217.61}]).diff * 100) / 100, -61.76);
+});
+test("bundle math skips cheap and zero-quantity cards", () => {
+  const b = L.bundle([{qty: 2, market: 10, paid: 4}, {qty: 1, market: 0.5}, {qty: 0, market: 99}, {qty: 1, market: ""}], 80, 1);
+  eq([b.count, b.market, b.ask, b.paid], [2, 20, 16, 8]);
+  eq(L.bundle([{qty: 1, market: ""}], 80).noPrice, 1);
+});
+test("bulk add lines", () => {
+  const p = L.parseBulkLine("pokemon, Pikachu ex, Surging Sparks, 238/191, SIR, Near Mint, 1, 40, 55");
+  eq([p.game, p.name, p.num, p.rarity, p.qty, p.paid, p.market], ["pokemon", "Pikachu ex", "238/191", "Special Illustration Rare (SIR)", 1, 40, 55]);
+  eq(L.parseBulkLine("one piece, Shanks, Romance Dawn, OP01-120, SEC, PSA 10").cond, "Graded");
+  eq(L.parseBulkLine("magic, Black Lotus"), null);
+  eq(L.parseBulkLine("pokemon"), null);
+});
+test("scanner text: card codes for each game", () => {
+  eq(L.parseCardText("NO. 0025 ... Mews 025/165 ® energy").num, "025");
+  eq(L.parseCardText("NO. 0025 ... Mews 025/165 ® energy").total, "165");
+  eq(L.parseCardText("Disney Lorcana 125/204 + EN + 11 Oisney").lorSet, "11");
+  eq(L.parseCardText("Disney Lorcana 207/204 • EN • 1").lorNum, "207");
+  eq(L.parseCardText("blah OP01-120 blah").opId, "OP01-120");
+  eq(L.parseCardText("ST10 - 005").opId, "ST10-005");
+  eq(L.parseCardText("TG12/TG30").num, "TG12");
+});
+test("price links: exact TCGplayer page when we know the product", () => {
+  const l = L.priceLinks({game: "pokemon", name: "Pikachu ex", num: "238/191", tcgId: 562004});
+  eq(l[0].url, "https://www.tcgplayer.com/product/562004");
+  eq(l[1].url.includes("LH_Sold=1"), true);
+  eq(L.priceLinks({game: "lorcana", name: "Elsa"})[0].url.includes("/search/lorcana-tcg/"), true);
+});
+test("normNum strips leading zeros only", () => {
+  eq(L.normNum("025"), "25"); eq(L.normNum("0"), "0"); eq(L.normNum("tg05"), "TG05");
+});
+
+const pass = results.filter(r => r.ok).length;
+document.getElementById("out").innerHTML = `<p><b>${pass} of ${results.length} passed</b></p>` +
+  results.map(r => `<div class="${r.ok ? "pass" : "fail"}">${r.ok ? "✓" : "✗"} ${r.name}${r.ok ? "" : " — " + r.err}</div>`).join("");
+window.testResults = {pass, total: results.length, failed: results.filter(r => !r.ok)};
+</script></body></html>

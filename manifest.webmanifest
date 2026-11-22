@@ -1,15 +1,20 @@
 {
-  "name": "Binder Buddy",
+  "name": "Binder Buddy: card binder for Pokémon, One Piece & Lorcana",
   "short_name": "Binder Buddy",
-  "description": "Free collection tracker for Pokémon, One Piece and Disney Lorcana cards.",
+  "description": "Free, private card binder. Scan cards, live prices and history, fair-trade checks and a scalper-price shield. No account, no ads.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#eef2fb",
   "theme_color": "#3466af",
+  "categories": ["utilities", "lifestyle", "productivity"],
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Scan cards", "url": "./?scan", "icons": [{"src": "icon-192.png", "sizes": "192x192"}]},
+    {"name": "Price check", "url": "./#check", "icons": [{"src": "icon-192.png", "sizes": "192x192"}]},
+    {"name": "Trade checker", "url": "./#trade", "icons": [{"src": "icon-192.png", "sizes": "192x192"}]}
   ]
 }

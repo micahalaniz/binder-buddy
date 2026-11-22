@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Case study: Binder Buddy · Micah Alaniz</title>
+<meta name="description" content="How Micah Alaniz designed and built Binder Buddy, a free, private, offline-first card collection app with on-device scanning and live prices.">
+<meta property="og:image" content="https://micahalaniz.github.io/binder-buddy/docs/og.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  @font-face { font-family: "Fredoka"; src: url(fonts/fredoka.woff2) format("woff2"); font-weight: 500 700; }
+  @font-face { font-family: "Nunito"; src: url(fonts/nunito.woff2) format("woff2"); font-weight: 600 800; }
+  :root { --ink:#1f2340; --soft:#5a5f84; --line:#e3e7f3; --accent:#3466af; --bg:#f6f8fd; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 600 17px/1.65 "Nunito", system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+  header { background: linear-gradient(135deg, #3466af, #1f2340); color: #fff; padding: 56px 20px 64px; }
+  .w { max-width: 860px; margin: 0 auto; }
+  h1, h2, h3 { font-family: "Fredoka", system-ui, sans-serif; line-height: 1.15; }
+  h1 { font-size: clamp(32px, 6vw, 52px); margin: 6px 0 10px; }
+  h2 { font-size: 28px; margin: 44px 0 10px; }
+  h3 { font-size: 20px; margin: 22px 0 6px; }
+  .kicker { font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .85; font-size: 13px; }
+  .lead { font-size: 20px; max-width: 680px; opacity: .95; }
+  .cta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  .cta a { background: #fff; color: var(--accent); font-weight: 800; padding: 12px 18px; border-radius: 14px; text-decoration: none; }
+  .cta a.alt { background: rgba(255,255,255,.15); color: #fff; }
+  main { padding: 10px 20px 60px; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: -34px; }
+  .fact { background: #fff; border-radius: 16px; padding: 14px 16px; box-shadow: 0 6px 20px rgba(20,30,80,.08); }
+  .fact b { font-family: "Fredoka"; font-size: 24px; display: block; color: var(--accent); }
+  .fact span { font-size: 14px; color: var(--soft); }
+  .shots { display: flex; gap: 14px; overflow-x: auto; padding: 8px 2px 14px; }
+  .shots figure { margin: 0; flex: 0 0 210px; }
+  .shots img { width: 210px; border-radius: 16px; box-shadow: 0 6px 20px rgba(20,30,80,.12); display: block; }
+  .shots figcaption { font-size: 13px; color: var(--soft); margin-top: 6px; text-align: center; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; background: #fff; border-radius: 14px; overflow: hidden; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: #eef2fb; font-family: "Fredoka"; font-weight: 600; }
+  .card { background: #fff; border-radius: 16px; padding: 4px 20px 14px; margin: 14px 0; box-shadow: 0 4px 14px rgba(20,30,80,.06); }
+  code { background: #eef2fb; padding: 1px 6px; border-radius: 6px; font-size: 15px; }
+  pre { background: #1f2340; color: #e9ecff; padding: 16px; border-radius: 14px; overflow-x: auto; font-size: 14px; line-height: 1.5; }
+  .diagram { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 8px; text-align: center; font-weight: 800; font-size: 14px; }
+  .diagram div { background: #fff; border: 3px solid var(--line); border-radius: 14px; padding: 12px 8px; }
+  .diagram i { font-style: normal; color: var(--soft); font-size: 22px; }
+  ul li { margin-bottom: 6px; }
+  footer { text-align: center; color: var(--soft); font-size: 14px; padding: 30px 20px 50px; }
+  a { color: var(--accent); }
+  @media (max-width: 640px) { .diagram { grid-template-columns: 1fr; } .diagram i { transform: rotate(90deg); } }
+</style>
+</head>
+<body>
+<header><div class="w">
+  <div class="kicker">Case study · Sweet Onion Studios</div>
+  <h1>Binder Buddy</h1>
+  <p class="lead">A free, private card binder for Pokémon, One Piece and Disney Lorcana collectors. It scans cards on-device, tracks live prices and history, and protects kids from scalper prices and lopsided trades.</p>
+  <div class="cta"><a href="./">Open the app</a><a class="alt" href="https://github.com/micahalaniz/binder-buddy">Read the code</a></div>
+</div></header>
+
+<main><div class="w">
+  <div class="facts">
+    <div class="fact"><b>$0</b><span>to run: static site, no servers, no API keys</span></div>
+    <div class="fact"><b>3 games</b><span>each with its own rarity system and price source</span></div>
+    <div class="fact"><b>0 deps</b><span>vanilla JS modules, no build step, no frameworks</span></div>
+    <div class="fact"><b>0 bytes</b><span>of user data collected. Everything stays on the device</span></div>
+  </div>
+
+  <h2>The problem</h2>
+  <p>Card collecting is huge again, and so is the money around it. The most popular collection apps keep the features collectors use most behind a subscription. Collectr's Pro tier, for example, is listed at $7.99/month or $59.99/year on the US App Store and includes unlimited scanning, years of price history and exports. Meanwhile, younger collectors are the easiest targets for scalpers and unfair trades.</p>
+  <p><b>Goal:</b> one free app that does the whole job (catalog, value, scan, trade, buy smart) and is safe for a 10-year-old to use: no account, no ads, no chat, no data collection.</p>
+
+  <h2>Research</h2>
+  <p>I compared the leading apps and read their public reviews to find the gaps.</p>
+  <table>
+    <tr><th>What collectors want</th><th>Typical app today</th><th>Binder Buddy</th></tr>
+    <tr><td>Scan cards</td><td>Paywalled after a few scans, or a subscription</td><td>Free and unlimited. Runs on your phone, so photos never upload</td></tr>
+    <tr><td>Price history</td><td>Paid tier</td><td>Free: daily per-card log, 2-week market history (One Piece), Cardmarket trend (Pokémon), plus exact sold-price links</td></tr>
+    <tr><td>Multiple games</td><td>Varies</td><td>Pokémon, One Piece, Lorcana, each with the correct rarity ladder</td></tr>
+    <tr><td>Fair trades</td><td>Rare</td><td>Built-in trade checker with a plain-language verdict</td></tr>
+    <tr><td>Avoid scalpers</td><td>Not a focus</td><td>Scalper Shield: asking price vs. market or MSRP, on a gauge</td></tr>
+    <tr><td>Privacy</td><td>Account required, data in the cloud</td><td>No account. IndexedDB on the device, plus backup files</td></tr>
+  </table>
+  <p style="font-size:14px;color:var(--soft)">Competitor pricing from the Collectr App Store listing (checked November 2026). Features and prices change, so check the store before relying on them.</p>
+
+  <h2>Screens</h2>
+  <div class="shots">
+    <figure><img src="docs/screens/binder.png" alt="Binder with live value"><figcaption>Binder + live value</figcaption></figure>
+    <figure><img src="docs/screens/detail.png" alt="Card details and price history"><figcaption>Price history + sold links</figcaption></figure>
+    <figure><img src="docs/screens/scan.png" alt="Scanner results"><figcaption>Scan → confirm</figcaption></figure>
+    <figure><img src="docs/screens/trade.png" alt="Trade checker"><figcaption>Trade checker</figcaption></figure>
+    <figure><img src="docs/screens/check.png" alt="Scalper Shield"><figcaption>Scalper Shield</figcaption></figure>
+    <figure><img src="docs/screens/dark.png" alt="Dark theme, picture grid"><figcaption>Themes + grid</figcaption></figure>
+  </div>
+
+  <h2>Architecture</h2>
+  <div class="diagram">
+    <div>📱 Your phone<br><span style="font-weight:600">PWA · IndexedDB · Service worker</span></div><i>⇄</i>
+    <div>🧠 On-device<br><span style="font-weight:600">Tesseract.js OCR · SVG charts</span></div><i>⇄</i>
+    <div>🌐 Open card data<br><span style="font-weight:600">TCGdex · Lorcast · OPTCG API</span></div>
+  </div>
+  <p>There is no backend. The app is a static site on GitHub Pages. Three community databases, each with a different shape, are normalized into one card model, so every screen can treat Pokémon, One Piece and Lorcana the same:</p>
+<pre>{ game, src, id, name, set, num, rarity, img, tcgId,
+  variants: { holofoil: 217.61, reverse-holofoil: 3.10 },  // USD market prices
+  v: "holofoil", market: 217.61, trend }</pre>
+  <ul>
+    <li><b>Caching &amp; courtesy:</b> set lists are cached for 3 days, and the One Piece catalogue (about 3 MB) is cached for 20 hours and searched locally. Lorcast calls are spaced 120 ms apart, and Pokémon calls run 4 at a time. A daily refresh updates every linked card quietly in the background.</li>
+    <li><b>Offline:</b> the service worker serves the app network-first (instant updates) and card images cache-first, with a size cap.</li>
+    <li><b>Privacy by design:</b> requests contain only a card name or number. Fonts are self-hosted, so there are no Google calls. Photos are compressed to JPEG blobs and never leave the device.</li>
+  </ul>
+
+  <h2>The hard part: scanning without a server</h2>
+  <div class="card">
+    <h3>Approach</h3>
+    <p>Image-recognition APIs cost money per scan and would mean uploading kids' photos. Instead, Binder Buddy reads the tiny <b>printed card code</b> that every card has, using on-device OCR:</p>
+    <ul>
+      <li>Pokémon: <code>238/191</code> (number / set size)</li>
+      <li>One Piece: <code>OP01-120</code></li>
+      <li>Lorcana: <code>207/204 • EN • 1</code> (number / set size • language • set)</li>
+    </ul>
+    <h3>Pipeline</h3>
+    <ul>
+      <li>Split a binder-page photo into 9 or 12 pockets and trim the pocket edges.</li>
+      <li>For each pocket, run greyscale and contrast passes on the whole card, the code strip zoomed in, each bottom corner, then the name bar. It <b>stops early</b> once an exact code is found.</li>
+      <li>Parse codes with regexes that tolerate common OCR slips (for example, a "•" read as "+").</li>
+      <li>Pokémon trick: a code like <code>025/165</code> has no set name, so the app finds every set with 165 cards and asks each for card 025. Name text breaks ties.</li>
+      <li>If no code is readable, it falls back to name search and labels the result a <i>guess</i>. The user always confirms before anything is saved.</li>
+    </ul>
+    <h3>Results on real card images (test page <code>tests/scan.html</code>)</h3>
+    <p>Single cards: <b>4 of 5 matched</b>. The miss was a low-resolution (600 px) One Piece image where the code was unreadable. On a simulated 9-pocket page built from the same small images, <b>5 of 9 pockets matched</b> in about 26 seconds. Phone photos are much higher resolution, which helps. Because the system never auto-saves a guess, a wrong read costs one tap instead of a wrong collection.</p>
+  </div>
+
+  <h2>Design decisions</h2>
+  <ul>
+    <li><b>Kid-safe defaults:</b> "Share my hits" hides prices unless you turn them on. There's no chat or social feed, and the trade guide starts with "Under 18? Trade online only with a parent."</li>
+    <li><b>Plain language:</b> verdicts like "📉 You'd lose value. Ask them to add about $61.76" instead of raw percentages.</li>
+    <li><b>Honest numbers:</b> sample cards use real live prices, and the value chart never invents history. It grows one point per day.</li>
+    <li><b>Make it yours:</b> 9 themes and custom colors, dark mode chosen with its own colors (not just inverted), color-coding by game, rarity, condition or tag, and three layouts.</li>
+    <li><b>Accessibility:</b> labelled controls, dialogs that close with Escape and return focus, live regions, a data table behind every chart, and support for reduced motion and forced colors.</li>
+  </ul>
+
+  <h2>Quality</h2>
+  <ul>
+    <li>A unit-test suite of 13 groups covers the pure logic (<code>js/logic.js</code>): rarity mapping for three data sources, trade and price verdicts, bundle math, bulk-add parsing and OCR code parsing. Open <code>tests/</code> in any browser.</li>
+    <li>End-to-end checks in headless Edge at phone size covered the first-run tour, sample data with live prices, price history, trade flow, Scalper Shield, scanning and dark mode.</li>
+  </ul>
+
+  <h2>What's next</h2>
+  <ul>
+    <li>More games (Magic, Yu-Gi-Oh!, Star Wars Unlimited) through the same card-model adapter.</li>
+    <li>Set-completion progress ("I have 142 of 191 in Surging Sparks").</li>
+    <li>Better scanning with a small on-device image-matching model for full-art cards.</li>
+    <li>Optional, private sync between your own devices.</li>
+  </ul>
+
+  <h2>About</h2>
+  <p>Designed and built by <b>Micah Alaniz</b> (Sweet Onion Studios), with Claude Code as an AI pair programmer. I make fun, useful software for kids, families and hobbyists. <a href="https://github.com/micahalaniz">GitHub</a></p>
+</div></main>
+<footer>Binder Buddy is free forever. Not affiliated with The Pokémon Company, Bandai, Disney, Ravensburger or TCGplayer.</footer>
+</body>
+</html>
