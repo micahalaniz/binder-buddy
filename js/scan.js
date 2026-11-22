@@ -24,18 +24,18 @@ export async function getWorker() {
 export async function stopWorker() { if (workerP) { try { (await workerP).terminate(); } catch (e) {} workerP = null; } }
 
 /** Draw part of an image to a canvas, scaled so its long side is about `size`, in grayscale with extra contrast. */
-function crop(im, sx, sy, sw, sh, size) {
+function crop(im, sx, sy, sw, sh, size, con = 1.5) {
   const k = size / Math.max(sw, sh), cv = document.createElement("canvas");
   cv.width = Math.round(sw * k); cv.height = Math.round(sh * k);
   const g = cv.getContext("2d");
-  g.filter = "grayscale(1) contrast(1.5)";
+  g.filter = `grayscale(1) contrast(${con})`;
   g.drawImage(im, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
   return cv;
 }
 
 async function readCell(worker, im, x, y, w, h) {
-  // whole card, then the bottom strip blown up (where the tiny card code lives), then the name strip
-  const parts = [crop(im, x, y, w, h, 1400), crop(im, x, y + h * 0.78, w, h * 0.22, 1800),
+  // whole card, then the One Piece code corner, then the bottom strip blown up (where the tiny card code lives), then the name strip
+  const parts = [crop(im, x, y, w, h, 1400), crop(im, x + w * 0.55, y + h * 0.94, w * 0.4, h * 0.06, 1600, 1.8), crop(im, x, y + h * 0.78, w, h * 0.22, 1800),
     crop(im, x, y + h * 0.86, w * 0.5, h * 0.14, 1400), crop(im, x + w * 0.5, y + h * 0.86, w * 0.5, h * 0.14, 1400), crop(im, x, y, w, h * 0.16, 1200)];
   let text = "";
   for (const cv of parts) {

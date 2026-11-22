@@ -86,6 +86,9 @@ test("scanner text: card codes for each game", () => {
   eq(L.parseCardText("Disney Lorcana 207/204 • EN • 1").lorNum, "207");
   eq(L.parseCardText("blah OP01-120 blah").opId, "OP01-120");
   eq(L.parseCardText("ST10 - 005").opId, "ST10-005");
+  eq(L.parseCardText("De The oi 0501-120 @").opId, "OP01-120");
+  eq(L.parseCardText("0PO5-061").opId, "OP05-061");
+  eq(L.parseCardText("238/191").opId, undefined);
   eq(L.parseCardText("TG12/TG30").num, "TG12");
 });
 test("price links: exact TCGplayer page when we know the product", () => {

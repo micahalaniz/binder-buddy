@@ -154,6 +154,9 @@ const SAMPLES = [
 const SAMPLE_WANTS = [{src: "tcgdex", id: "sv08.5-161", max: 900}, {src: "optcg", id: "OP01-120_p1", max: 60}];
 export async function loadSamples() {
   toast("Loading sample cards with today's prices…", 6000);
+  // loading twice would double them, so clear any old samples first
+  for (const c of [...cards.values()]) if (c.demo) { cards.delete(c.id); await db.del("cards", c.id); }
+  for (const w of [...wants.values()]) if (w.demo) { wants.delete(w.id); await db.del("wants", w.id); }
   let n = 0;
   await Promise.all(SAMPLES.map(async s => {
     try {

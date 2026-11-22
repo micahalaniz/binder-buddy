@@ -156,6 +156,11 @@ export function parseCardText(text) {
   // One Piece: OP01-120, ST10-005, EB01-012, PRB01-001, P-001
   const op = t.toUpperCase().match(/\b(OP|ST|EB|PRB)\s?(\d{2})\s?[-–—]\s?(\d{3})\b/);
   if (op) out.opId = `${op[1]}${op[2]}-${op[3]}`;
+  else {
+    // the scanner often reads the tiny "OP" as "0P", "05" or "OR", and 0 as O
+    const m = t.toUpperCase().match(/\b[O0Q][P5R]\s?([O0\d]{2})\s?[-–—]\s?(\d{3})\b/);
+    if (m) out.opId = `OP${m[1].replace(/O/g, "0")}-${m[2]}`;
+  }
   // Lorcana: "207/204 • EN • 1"
   const lo = t.match(/\b(\d{1,3})\s*\/\s*(\d{2,3})\s*[•·.*°o+»«-]?\s*E\s?N\s*[•·.*°o+»«-]?\s*(\d{1,2})\b/i);
   if (lo) { out.lorNum = String(+lo[1]); out.lorSet = String(+lo[3]); }
