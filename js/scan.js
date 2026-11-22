@@ -125,6 +125,8 @@ async function rankByLook(im, x, y, w, h, cands) {
     try { const ci = await loadImg(c.img); return {c, i, d: lookDist(me, sig(ci, 0, 0, ci.width, ci.height))}; }
     catch (e) { return {c, i, d: Infinity}; }                              // some card sites don't allow this; keep their order
   }));
+  // if any picture couldn't be compared, the comparison isn't fair: keep the original order
+  if (scored.some(s => s.d === Infinity)) return cands;
   return scored.sort((p, q) => (p.d - q.d) || (p.i - q.i)).map(s => s.c);
 }
 
