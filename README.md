@@ -28,6 +28,8 @@ Collection apps charge a monthly subscription for the features collectors need m
 | 📈 **Price history** | A daily chart of your collection's value and of each card. One Piece shows 2 weeks of TCGplayer history, and Pokémon shows the Cardmarket 7- vs 30-day trend. Each card also has one-tap links to its exact TCGplayer page, eBay **sold** listings, PriceCharting and 130point. |
 | 🔎 **Do I have it?** | Type any name, set, number or rarity and get an instant yes or no. |
 | ⭐ **Wishlist** | Set the most you'd pay, and it tells you when the market reaches your price. |
+| 🧠 **Learns from mistakes** | Pick the right card after a wrong scan and it remembers next time. 🚩 Report sends what it read (never your photo); checked fixes ship to everyone in `js/fixes.js`. |
+| 🔗 **Trade Links** | List cards for trade or sale and share one link. Whoever opens it sees matches with their wishlist and a suggested fair trade, including how much extra you are OK giving. The list rides in the part of the link after `#`, which browsers never send to a server, so there are no accounts and no database. |
 | 🤝 **Trade checker** | "I give" vs. "I get" at market value, with a clear fair / ahead / behind call. It updates your binder when the trade is done. |
 | 🛡️ **Scalper Shield** | Compares an asking price to market value (singles) or store price (sealed) on a gauge, with tips for beating scalpers. |
 | 💰 **Bundle value** | Prices a pile at a percentage of market for selling to a shop or posting a lot. |
@@ -52,7 +54,7 @@ js/logic.js           pure logic: rarities, verdicts, bundle math, OCR text pars
 js/catalog.js         card databases → one shape; prices; history
 js/scan.js            OCR pipeline        js/scanui.js   scan → confirm → add
 js/binder.js          binder list, details, edit, photos
-js/wishlist.js  js/trade.js  js/pricecheck.js  js/share.js  js/more.js
+js/wishlist.js  js/trade.js  js/tradelink.js  js/pricecheck.js  js/share.js  js/more.js
 js/store.js           IndexedDB + settings      js/chart.js   SVG line chart
 sw.js                 offline: network-first app, cache-first card images
 tests/                unit tests (open tests/index.html) + scanner test on real card images

@@ -19,6 +19,7 @@ export const DEFAULTS = {
   tags: [{id: "t1", name: "Trade binder", color: "#ff7a59"}, {id: "t2", name: "For sale", color: "#1f9d55"}, {id: "t3", name: "Keep forever", color: "#8b5cf6"}],
   games: ["pokemon", "onepiece", "lorcana"], gameColors: {}, condColors: {}, crop: 1, quality: 1200, camera: 0, cur: "$",
   title: "📒 Binder Buddy", autoPrice: 1, welcomed: 0, lastPriced: "",
+  tlName: "", tlPct: 80, tlWants: 1, tlGap: 20, tlUsed: 0,
 };
 export let S = load("bb-settings", {});
 S = {...DEFAULTS, ...S};

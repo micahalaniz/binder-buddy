@@ -123,3 +123,13 @@ $("t-done").onclick = async () => {
 $("whereList").innerHTML = WHERE.map(([t, d]) => `<div class="where"><b>${t}</b><p>${d}</p></div>`).join("") +
   `<div class="where" style="border-color:var(--warn)"><b>🛡️ Trade safe</b><ul class="tips" style="font-size:13.5px">${SAFETY.map(s => `<li>${esc(s)}</li>`).join("")}</ul></div>`;
 on("trade:give", id => { emit("tab", "trade"); giveCard(id); });
+
+/** Fill the trade checker from a Trade Link offer: my card ids to give, their cards to get. */
+export function setTrade(giveIds, getItems) {
+  T = {give: [], get: []};
+  const n = {};
+  for (const id of giveIds) n[id] = (n[id] || 0) + 1;
+  for (const [id, q] of Object.entries(n)) { const c = cards.get(id); if (c) T.give.push({from: "mine", cardId: id, name: c.name, set: c.set, img: c.img, photos: (c.photos || []).slice(0, 1), value: +c.market || "", qty: q}); }
+  T.get = getItems.map(it => ({from: "db", ...it, link: it.link ? {...it.link, market: it.value} : null}));
+  save(); renderTrade();
+}

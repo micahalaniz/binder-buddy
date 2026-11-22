@@ -82,6 +82,13 @@
 
   <!-- ============================================================ TRADE -->
   <section class="view" id="v-trade" aria-label="Trade checker">
+    <div class="panel lift" id="tl-panel">
+      <h2>📤 My trade binder</h2>
+      <p class="note">Pick the cards you'll trade or sell, then share one link. Whoever opens it sees your cards, what you're looking for, and fair trades for both of you. No account needed.</p>
+      <p style="font-weight:800;margin:8px 0" id="tl-sum"></p>
+      <div class="acts" style="justify-content:flex-start;margin-top:0"><button class="btn" id="tl-pick">Choose my cards</button><button class="btn ok" id="tl-share">🔗 Share my link</button></div>
+      <div id="tl-saved"></div>
+    </div>
     <div class="panel lift">
       <h2>🤝 Is this trade fair?</h2>
       <p class="note">Add what you give and what you get. Values use today's market prices, and you can change any number.</p>
@@ -147,6 +154,16 @@
         <button class="btn ghost" id="m-backupBtn">💾 Backup &amp; import</button>
         <button class="btn ghost" id="m-tour">👋 Show the welcome again</button>
       </div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">🧠 Help it get smarter</h3>
+      <p class="note">When the scanner guesses wrong and you pick the right card, it remembers and gets it right next time. 🚩 Reports go to the Binder Buddy team, and every fix we check ships to everyone in the next update.</p>
+      <p style="font-weight:800;margin:6px 0" id="lr-sum"></p>
+      <div class="acts" style="justify-content:flex-start;margin-top:0">
+        <button class="btn" id="lr-report">🚩 Report a problem or idea</button>
+        <button class="btn ghost" id="lr-forget">Forget my scanner fixes</button>
+      </div>
+      <p class="note">Reports open on GitHub (a free account is needed) so you can read every word before you send it. Under 13? Ask a parent to send it. Never put your address or phone number in a report.</p>
     </div>
     <div class="panel">
       <h3 style="margin-top:0">Our promise</h3>
@@ -240,6 +257,8 @@
     <div class="f"><label for="f-paid">I paid (each)</label><input id="f-paid" type="number" min="0" step="0.01" inputmode="decimal"></div>
   </div>
   <div class="f"><label for="f-mkt">Market value (each)</label><input id="f-mkt" type="number" min="0" step="0.01" inputmode="decimal"></div>
+  <div class="f"><label for="f-tl">My trade binder</label>
+    <select id="f-tl"><option value="">Not listed</option><option value="t">🔁 For trade</option><option value="s">💲 For sale</option><option value="ts">🔁💲 Trade or sell</option></select></div>
   <div class="f"><label>Tags</label><div class="tagpick" id="f-tags"></div></div>
   <div class="f"><label for="f-notes">Notes</label><input id="f-notes" placeholder="Binder page, where you got it, trade value…"></div>
   <div class="acts">
@@ -360,6 +379,39 @@
   <div id="bd-out" style="margin-top:12px"></div>
   <p class="note">Rough guide: shops usually pay well under market when they buy from you. Selling one card at a time gets closer to full market, and a bundle discount helps a pile sell fast.</p>
   <div class="acts"><button class="btn ghost" id="bd-copy">Copy list to share</button><button class="btn" data-close>Done</button></div>
+</div></div>
+
+<!-- trade links: choose my cards -->
+<div class="modal" id="m-tlist" role="dialog" aria-modal="true" aria-labelledby="tl-title"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h2 id="tl-title">📤 My trade binder</h2>
+  <div class="f"><label for="tl-name">Nickname on your link</label><input id="tl-name" maxlength="24" placeholder="Like PikaPal or ShanksFan" autocomplete="off">
+    <p class="note">Use a nickname. Never your real name, school, phone number or address.</p></div>
+  <div class="colrow"><span>Sell price: <b id="tl-pctl">80</b>% of market</span><input id="tl-pct" type="range" min="50" max="110" step="5" style="max-width:200px" aria-label="Sell price as percent of market"></div>
+  <div class="colrow"><span>Show my wishlist so they know what I'm looking for</span><select id="tl-wants" style="width:auto"><option value="1">Yes</option><option value="0">No</option></select></div>
+  <input id="tl-q" type="search" placeholder="Search my cards" autocomplete="off">
+  <div id="tl-out" class="list" style="margin-top:10px"></div>
+  <div class="acts"><button class="btn" id="tl-done">Done</button></div>
+</div></div>
+
+<!-- trade links: share my link -->
+<div class="modal" id="m-tshare" role="dialog" aria-modal="true" aria-labelledby="ts-title"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h2 id="ts-title">🔗 Share my trade binder</h2>
+  <p class="note" id="ts-info"></p>
+  <textarea id="ts-link" readonly rows="3" aria-label="My trade binder link" style="width:100%;font-size:12px"></textarea>
+  <p class="note" id="ts-long" hidden>This link is long. Some chats (like Discord) cut long messages, so use Share, or list fewer cards.</p>
+  <div class="acts"><button class="btn ghost" id="ts-copy">Copy link</button><button class="btn" id="ts-send">Share…</button></div>
+  <div class="where" style="border-color:var(--warn)"><b>🛡️ What's in the link</b>
+    <p>Only your listed cards, your nickname and (if you chose) your wishlist. No name, no address, no account. Post it where you already trade, like your card shop's group. Under 18? Ask a parent first.</p></div>
+</div></div>
+
+<!-- trade links: a friend's binder -->
+<div class="modal" id="m-friend" role="dialog" aria-modal="true" aria-labelledby="fr-title"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h2 id="fr-title" tabindex="-1">Trade binder</h2>
+  <p class="note" id="fr-sub"></p>
+  <div id="fr-body"></div>
 </div></div>
 
 <!-- share image -->

@@ -1,10 +1,11 @@
 // Customize, backup/import, spreadsheets, bulk add, bundle value, welcome tour, sample cards, support.
 import { GAMES, CONDS, AFF, bundle, parseBulkLine } from "./logic.js";
-import { S, THEMES, DEFAULTS, saveS, replaceS, cards, wants, db, history, saveLocal, dropPhotos } from "./store.js";
+import { S, THEMES, DEFAULTS, saveS, replaceS, cards, wants, db, history, saveLocal, loadLocal, dropPhotos } from "./store.js";
 import { card as fetchCard, logPrice } from "./catalog.js";
 import { $, esc, newId, toast, seg, openSheet, closeSheet, copyText, download } from "./util.js";
 import { money, signed, gameColor, condColor, condLabel, applyTheme, emit, on, VERSION } from "./ui.js";
 import { visible, filt, linkFields, saveCard, render, updatePrices } from "./binder.js";
+import { learnedCount, clearLearned, reportURL } from "./learn.js";
 
 /** Set this to a Ko-fi (or similar) page to show a tip button. Empty = hidden. */
 export const SUPPORT_URL = "";
@@ -78,7 +79,7 @@ $("exportBtn").onclick = async () => {
   toast("Making your backup…");
   const photos = {};
   for (const c of cards.values()) for (const id of c.photos || []) { const b = await db.get("photos", id); if (b) photos[id] = await b64(b); }
-  const data = JSON.stringify({app: "binder-buddy", version: 2, saved: new Date().toISOString(), settings: S, cards: [...cards.values()], wants: [...wants.values()], history: history(), photos});
+  const data = JSON.stringify({app: "binder-buddy", version: 2, saved: new Date().toISOString(), settings: S, cards: [...cards.values()], wants: [...wants.values()], history: history(), learn: loadLocal("bb-learn", []), friends: loadLocal("bb-friends", []), photos});
   download(new Blob([data], {type: "application/json"}), "binder-buddy-backup-" + new Date().toISOString().slice(0, 10) + ".json");
   toast("Backup saved to your downloads");
 };
@@ -92,6 +93,8 @@ $("importFile").onchange = async e => {
     for (const c of d.cards) if (c && c.id && c.name) { cards.set(c.id, c); await db.put("cards", c); }
     for (const w of d.wants || []) if (w && w.id && w.name) { wants.set(w.id, w); await db.put("wants", w); }
     if (Array.isArray(d.history) && d.history.length > history().length) saveLocal("bb-history", d.history);
+    if (Array.isArray(d.learn) && d.learn.length > loadLocal("bb-learn", []).length) saveLocal("bb-learn", d.learn.filter(x => x && typeof x.k === "string" && x.ref && x.ref.src && x.ref.id).slice(0, 400));
+    if (Array.isArray(d.friends) && !loadLocal("bb-friends", []).length) saveLocal("bb-friends", d.friends.filter(x => x && typeof x.h === "string").slice(0, 20));
     if (d.settings) { replaceS({...d.settings, welcomed: 1}); applyTheme(); }
     render(); emit("data"); toast(`Loaded ${d.cards.length} cards from your backup`);
   } catch (err) { toast("That file isn't a Binder Buddy backup."); }
@@ -211,3 +214,16 @@ $("supportBox").innerHTML = SUPPORT_URL
   : `<p class="note" style="margin-top:10px">Want to help? Tell a friend at your next league night 💙</p>`;
 $("affNote").hidden = !AFF.tcgplayer;
 $("ver").textContent = VERSION;
+
+// ================================================================== learning & reports
+export function drawLearn() {
+  const n = learnedCount();
+  $("lr-sum").textContent = n ? `Your scanner has learned from ${n} fix${n === 1 ? "" : "es"} on this device.` : "No scanner fixes yet.";
+  $("lr-forget").hidden = !n;
+}
+$("lr-report").onclick = () => {
+  window.open(reportURL("Report: ", ["**What happened?** (a wrong price, a wrong card, something broken, or an idea)", "", "", "**Which card or screen?**", "", ""], VERSION), "_blank", "noopener");
+};
+$("lr-forget").onclick = () => { clearLearned(); drawLearn(); toast("Scanner fixes forgotten."); };
+on("data", drawLearn);
+drawLearn();

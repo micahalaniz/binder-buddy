@@ -125,12 +125,14 @@
       <li>If no code is readable, it falls back to name search and labels the result a <i>guess</i>. The user always confirms before anything is saved.</li>
     </ul>
     <h3>Results on real card images (test page <code>tests/scan.html</code>)</h3>
-    <p>Single cards: <b>4 of 5 matched</b>. The miss was a low-resolution (600 px) One Piece image where the code was unreadable. On a simulated 9-pocket page built from the same small images, <b>5 of 9 pockets matched</b> in about 26 seconds. Phone photos are much higher resolution, which helps. Because the system never auto-saves a guess, a wrong read costs one tap instead of a wrong collection.</p>
+    <p>Single cards: <b>4 of 5 matched exactly</b> (after adding a dedicated crop for the One Piece code corner and tolerance for common misreads like "0501" for "OP01"). The fifth (a full-art whose number sits beside gold stars) found the right Pokémon but the wrong print, so I added a look-alike check: the photo and each print's official picture are shrunk to a 12×16 color grid and compared, and the closest look goes first. Now <b>5 of 5</b> come out on top.</p>
+    <p><b>It learns from mistakes.</b> When someone picks a different card than the first guess, the app remembers what it read and which card was right, on their device, so the same misread is fixed next time. Fixes from a printed code are trusted; fixes from the name alone are only hints, so one fix can't force every Mega Absol to the same print. A 🚩 Report button writes up what the scanner read and what was right (never the photo) as a GitHub issue. Checked fixes go into <code>js/fixes.js</code> with a test, so everyone gets them in the next update. A person reviews each one, so pranks can't teach it wrong answers. On a simulated 9-pocket page built from the same small images, <b>5 of 9 pockets matched</b> in about 26 seconds. Phone photos are much higher resolution, which helps. Because the system never auto-saves a guess, a wrong read costs one tap instead of a wrong collection.</p>
   </div>
 
   <h2>Design decisions</h2>
   <ul>
     <li><b>Kid-safe defaults:</b> "Share my hits" hides prices unless you turn them on. There's no chat or social feed, and the trade guide starts with "Under 18? Trade online only with a parent."</li>
+    <li><b>Trade Links instead of accounts and chat:</b> the cards you list are compressed into the part of a share link after <code>#</code>, which browsers never send to any server. A friend opens it and the app matches their wishlist and suggests a fair trade (a small subset search that prefers cards the other person wants, keeps their side within 5% of fair, and stays within the extra you said you are OK giving). Every field in an incoming link is checked, and pictures load only from the three card databases, so a link can't inject code or track whoever opens it. Deals finish in person, so the app never holds money, addresses or messages.</li>
     <li><b>Plain language:</b> verdicts like "📉 You'd lose value. Ask them to add about $61.76" instead of raw percentages.</li>
     <li><b>Honest numbers:</b> sample cards use real live prices, and the value chart never invents history. It grows one point per day.</li>
     <li><b>Make it yours:</b> 9 themes and custom colors, dark mode chosen with its own colors (not just inverted), color-coding by game, rarity, condition or tag, and three layouts.</li>
@@ -139,7 +141,7 @@
 
   <h2>Quality</h2>
   <ul>
-    <li>A unit-test suite of 13 groups covers the pure logic (<code>js/logic.js</code>): rarity mapping for three data sources, trade and price verdicts, bundle math, bulk-add parsing and OCR code parsing. Open <code>tests/</code> in any browser.</li>
+    <li>A unit-test suite of 16 groups covers the pure logic (<code>js/logic.js</code>): rarity mapping for three data sources, trade and price verdicts, bundle math, bulk-add parsing, OCR code parsing, card matching, the trade suggester and the scanner memory. Open <code>tests/</code> in any browser.</li>
     <li>End-to-end checks in headless Edge at phone size covered the first-run tour, sample data with live prices, price history, trade flow, Scalper Shield, scanning and dark mode.</li>
   </ul>
 

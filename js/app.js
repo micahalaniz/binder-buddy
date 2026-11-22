@@ -11,15 +11,17 @@ import "./pricecheck.js";
 import { openScan } from "./scanui.js";
 import { openShare } from "./share.js";
 import { openWelcome } from "./more.js";
+import { openFriend, drawPanel } from "./tradelink.js";
 
 // ---------------------------------------------------------------- tabs (also reachable as #wish, #trade, #check, #more)
 const VIEWS = ["binder", "wish", "trade", "check", "more"];
 function showTab(v, push = true) {
+  if (v.startsWith("t=")) { openTradeLink(v.slice(2)); return; }
   if (!VIEWS.includes(v)) v = "binder";
   for (const k of VIEWS) $("v-" + k).classList.toggle("on", k === v);
   document.querySelectorAll(".tabs button").forEach(b => { const on = b.dataset.v === v; b.classList.toggle("on", on); if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
   if (v === "wish") renderWishes();
-  if (v === "trade") renderTrade();
+  if (v === "trade") { renderTrade(); drawPanel(); }
   if (push) history.replaceState(null, "", v === "binder" ? location.pathname : "#" + v);
   window.scrollTo({top: 0});
 }
@@ -51,8 +53,10 @@ document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e =
     return;
   }
   render();
+  const fromLink = location.hash.startsWith("#t=");   // a friend's trade link
   showTab(location.hash.slice(1), false);
-  if (!S.welcomed && !cards.size) openWelcome();
+  if (fromLink) { /* their binder is showing; the welcome comes after they close it */ }
+  else if (!S.welcomed && !cards.size) openWelcome();
   else if (new URLSearchParams(location.search).has("scan")) openScan();   // home-screen shortcut
   // fresh prices once a day, quietly
   const age = S.lastPriced ? Date.now() - Date.parse(S.lastPriced) : Infinity;
@@ -60,3 +64,14 @@ document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e =
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
 window.addEventListener("online", () => toast("Back online"));
+
+// A friend's trade link (#t=...): show their binder on the Trade tab, then tidy the address bar.
+async function openTradeLink(hash) {
+  showTab("trade", false);
+  history.replaceState(null, "", "#trade");
+  if (await openFriend(hash) && !S.welcomed && !cards.size) {
+    // first visit from a friend's link: after they look, offer the welcome tour
+    const m = $("m-friend"), obs = new MutationObserver(() => { if (!m.classList.contains("open")) { obs.disconnect(); openWelcome(); } });
+    obs.observe(m, {attributes: true, attributeFilter: ["class"]});
+  }
+}

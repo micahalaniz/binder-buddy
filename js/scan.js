@@ -5,6 +5,7 @@
 import { parseCardText, normNum } from "./logic.js";
 import { search, card, onePieceByCode, lorcanaBySetNum, pokemonSetsByTotal } from "./catalog.js";
 import { loadImg } from "./util.js";
+import { recall } from "./learn.js";
 
 const TESS = "https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js";
 let workerP = null;
@@ -75,7 +76,7 @@ export async function identify(text, gameHint = "auto") {
       } catch (e) {}
     }
   }
-  const exact = out.length > 0;
+  let exact = out.length > 0;
   if (!out.length) {
     // No code found: guess from the name text (you'll be asked to confirm)
     const g = gameHint === "auto" ? "pokemon" : gameHint;
@@ -84,7 +85,47 @@ export async function identify(text, gameHint = "auto") {
       if (out.length) break;
     }
   }
-  return {parsed: p, candidates: out.slice(0, 8), exact};
+  // Fixed before? (by you on this device, or by a checked report for everyone)
+  let remembered = null;
+  const m = recall(p);
+  if (m) {
+    try {
+      const c = out.find(x => x.src === m.ref.src && x.id === m.ref.id) || await card(m.ref.src, m.ref.id);
+      if (c) {
+        const i = out.indexOf(c); if (i >= 0) out.splice(i, 1);
+        out.unshift(c);
+        if (m.strong) { exact = true; remembered = m.how; }
+      }
+    } catch (e) {}
+  }
+  return {parsed: p, candidates: out.slice(0, 8), exact, remembered};
+}
+
+// ------------------------------------------------------------------ look-alike check
+// Same name, different print (like a regular Mega Absol ex vs. its full-art)? Shrink the photo and each
+// print's official picture to a tiny 12×16 color grid and compare them. The closest look goes first.
+function sig(im, x, y, w, h) {
+  const a = document.createElement("canvas"); a.width = 48; a.height = 64;
+  a.getContext("2d").drawImage(im, x, y, w, h, 0, 0, 48, 64);          // two steps shrink more smoothly
+  const b = document.createElement("canvas"); b.width = 12; b.height = 16;
+  const g = b.getContext("2d"); g.drawImage(a, 0, 0, 12, 16);
+  const d = g.getImageData(0, 0, 12, 16).data, out = new Float32Array(12 * 16 * 3);
+  let j = 0, mean = 0;
+  for (let i = 0; i < d.length; i += 4) { out[j++] = d[i]; out[j++] = d[i + 1]; out[j++] = d[i + 2]; }
+  for (const v of out) mean += v / out.length;
+  for (let i = 0; i < out.length; i++) out[i] -= mean;                     // ignore overall brightness (room lighting)
+  return out;
+}
+const lookDist = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]); return s / a.length; };
+async function rankByLook(im, x, y, w, h, cands) {
+  if (!cands || cands.length < 2) return cands;
+  let me; try { me = sig(im, x, y, w, h); } catch (e) { return cands; }
+  const scored = await Promise.all(cands.map(async (c, i) => {
+    if (!c.img) return {c, i, d: Infinity};
+    try { const ci = await loadImg(c.img); return {c, i, d: lookDist(me, sig(ci, 0, 0, ci.width, ci.height))}; }
+    catch (e) { return {c, i, d: Infinity}; }                              // some card sites don't allow this; keep their order
+  }));
+  return scored.sort((p, q) => (p.d - q.d) || (p.i - q.i)).map(s => s.c);
 }
 
 /**
@@ -101,7 +142,10 @@ export async function scanPhoto(blob, layout, gameHint, onCell = () => {}) {
     const inset = total > 1 ? 0.04 : 0;   // ignore binder-pocket edges
     const x = c * cw + cw * inset, y = r * ch + ch * inset, w = cw * (1 - 2 * inset), h = ch * (1 - 2 * inset);
     let res;
-    try { const text = await readCell(worker, im, x, y, w, h); res = {...await identify(text, gameHint), text}; }
+    try {
+      const text = await readCell(worker, im, x, y, w, h); res = {...await identify(text, gameHint), text};
+      if (!res.remembered) res.candidates = await rankByLook(im, x, y, w, h, res.candidates);   // a remembered fix stays first
+    }
     catch (e) { res = {parsed: {}, candidates: [], text: "", error: e.message}; }
     // a thumbnail of the pocket so you can see which card is which
     const t = document.createElement("canvas"), k = 160 / Math.max(w, h);

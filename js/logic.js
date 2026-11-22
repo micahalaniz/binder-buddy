@@ -174,3 +174,42 @@ export function parseCardText(text) {
 }
 
 export const normNum = s => String(s || "").replace(/^0+(?=\d)/, "").toUpperCase();
+
+// ------------------------------------------------------------------ trade links: match cards and suggest fair trades
+/** Keys that say "this is the same card": the database id when we know it, plus game + name + number. */
+export function cardKeys(c) {
+  const keys = [];
+  if (c.ref && c.ref.src && c.ref.id) keys.push(c.ref.src + ":" + c.ref.id);
+  if (c.name) keys.push([c.game || "", String(c.name).toLowerCase().trim(), normNum(String(c.num || "").split("/")[0])].join("|"));
+  return keys;
+}
+/** Does card c match anything in the list? */
+export function matchesAny(c, list) {
+  const set = new Set(list.flatMap(cardKeys));
+  return cardKeys(c).some(k => set.has(k));
+}
+/**
+ * Pick cards to offer for what you want.
+ * want: total value of the cards you asked for.
+ * cands: [{id, value, wanted}] (one entry per copy you could give; wanted = on their wishlist).
+ * myGap: how much more than "want" you're OK giving. Their side never drops more than 5% (min $1) below fair.
+ * Returns {pick: [ids], give, diff, fits} or null.
+ */
+const better = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] > b[i]; return false; };
+export function suggestTrade(want, cands, myGap = 0) {
+  want = +want || 0;
+  const pool = cands.filter(c => +c.value > 0).sort((a, b) => (b.wanted - a.wanted) || (Math.abs(a.value - want) - Math.abs(b.value - want))).slice(0, 16);
+  if (!want || !pool.length) return null;
+  const lo = want - Math.max(1, want * 0.05), hi = want + Math.max(0, +myGap || 0);
+  let best = null;
+  for (let mask = 1; mask < (1 << pool.length); mask++) {
+    let give = 0, wanted = 0, n = 0;
+    for (let i = 0; i < pool.length; i++) if (mask & (1 << i)) { give += +pool[i].value; wanted += pool[i].wanted ? 1 : 0; n++; }
+    const fits = give >= lo && give <= hi, diff = give - want;
+    // best = fits first, then more of the cards they want, then closest value, then fewer cards
+    const score = [fits ? 1 : 0, fits ? wanted : 0, -Math.abs(diff), -n];
+    if (!best || better(score, best.score)) best = {score, mask, give, diff, fits};
+  }
+  const pick = pool.filter((_, i) => best.mask & (1 << i)).map(c => c.id);
+  return {pick, give: Math.round(best.give * 100) / 100, diff: Math.round(best.diff * 100) / 100, fits: best.fits};
+}

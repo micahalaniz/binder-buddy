@@ -5,6 +5,7 @@
 <script type="module">
 // Zero-dependency test runner for the pure logic in js/logic.js. Open this page in any browser.
 import * as L from "../js/logic.js";
+import * as LR from "../js/learn.js";
 const results = [];
 const test = (name, fn) => { try { fn(); results.push({name, ok: true}); } catch (e) { results.push({name, ok: false, err: e.message}); } };
 const eq = (a, b, msg = "") => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${msg} expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); };
@@ -99,6 +100,36 @@ test("price links: exact TCGplayer page when we know the product", () => {
 });
 test("normNum strips leading zeros only", () => {
   eq(L.normNum("025"), "25"); eq(L.normNum("0"), "0"); eq(L.normNum("tg05"), "TG05");
+});
+test("trade links: the same card matches by id or by name + number", () => {
+  const want = [{game: "pokemon", name: "Charizard ex", num: "199/165", ref: {src: "tcgdex", id: "sv03.5-199"}}];
+  eq(L.matchesAny({game: "pokemon", name: "charizard EX ", num: "199", ref: null}, want), true);
+  eq(L.matchesAny({game: "pokemon", name: "Pikachu", num: "199"}, want), false);
+  eq(L.matchesAny({ref: {src: "tcgdex", id: "sv03.5-199"}}, want), true);
+});
+test("trade links: suggested trades stay fair", () => {
+  const c = [{id: "a", value: 30, wanted: false}, {id: "b", value: 45, wanted: true}, {id: "c", value: 10, wanted: true}, {id: "d", value: 200, wanted: false}];
+  const s = L.suggestTrade(50, c, 10);
+  eq([s.pick.sort(), s.give, s.fits], [["b", "c"], 55, true]);   // both cards they want, $5 over is inside my $10 gap
+  eq([L.suggestTrade(50, c, 0).pick, L.suggestTrade(50, c, 0).fits], [["b"], false]);   // nothing lands in $47.50–$50: closest, fewest cards, flagged
+  eq(L.suggestTrade(0, c, 10), null);
+  eq(L.suggestTrade(500, c, 0).fits, false);                     // can't reach $500: best effort, marked as not fitting
+});
+
+test("scanner memory: a fix is remembered, by code (sure) or by name (a hint)", () => {
+  const keep = localStorage.getItem("bb-learn");   // don't touch the real memory on this device
+  try {
+    LR.clearLearned();
+    eq(LR.codeKeys({num: "025", total: "165"}), ["pk:25/165"]);
+    eq(LR.codeKeys({opId: "OP01-120"}), ["op:OP01-120"]);
+    LR.remember({num: "160", total: "132", words: ["Mega Absol"]}, {src: "tcgdex", id: "x-180", name: "Mega Absol ex"});
+    eq(LR.recall({num: "160", total: "132"}), {ref: {src: "tcgdex", id: "x-180"}, how: "you", strong: true});
+    eq(LR.recall({words: ["Mega Absol"]}).strong, false);
+    eq(LR.recall({num: "161", total: "132", words: ["Pikachu"]}), null);
+    LR.remember({num: "160", total: "132"}, {src: "tcgdex", id: "x-160", name: "Other"});   // a newer fix wins
+    eq(LR.recall({num: "160", total: "132"}).ref.id, "x-160");
+    eq(LR.learnedCount(), 2);
+  } finally { if (keep == null) localStorage.removeItem("bb-learn"); else localStorage.setItem("bb-learn", keep); }
 });
 
 const pass = results.filter(r => r.ok).length;

@@ -105,7 +105,7 @@ function listCard(c) {
     ${img}
     <div><div class="nm">${esc(c.name)}</div>
       <div class="meta">${esc([S.games.length > 1 && GAMES[c.game] ? GAMES[c.game].name : "", c.set, c.num].filter(Boolean).join(" · "))}</div>
-      <div class="meta">${c.rarity ? `<span class="tag soft">${esc(c.rarity)}</span>` : ""}<span class="tag" style="background:${condColor(c.cond)}">${esc(condLabel(c))}</span>${c.lang && c.lang !== "English" ? `<span class="tag soft">${esc(c.lang)}</span>` : ""}${tagsHTML(c)}</div></div>
+      <div class="meta">${c.rarity ? `<span class="tag soft">${esc(c.rarity)}</span>` : ""}<span class="tag" style="background:${condColor(c.cond)}">${esc(condLabel(c))}</span>${c.lang && c.lang !== "English" ? `<span class="tag soft">${esc(c.lang)}</span>` : ""}${c.tl ? `<span class="tag soft">${{t: "🔁 Trade", s: "💲 Sale", ts: "🔁💲 Trade or sell"}[c.tl] || ""}</span>` : ""}${tagsHTML(c)}</div></div>
     <div class="qty"><button data-a="minus" aria-label="One less ${esc(c.name)}">−</button><b>${n}</b><button data-a="plus" aria-label="One more ${esc(c.name)}">+</button></div>
     <div class="money">
       <span>${moneyOr(c.market)}${c.market !== "" && c.market != null ? ` each · <b>${money(each * n)}</b>` : ""}</span>
@@ -286,7 +286,7 @@ export function openEdit(id, pre = {}, onSaved = null) {
   $("e-title").textContent = id ? "Edit card" : "Add a card";
   $("f-name").value = c.name || ""; $("f-set").value = c.set || ""; $("f-num").value = c.num || "";
   $("f-lang").value = c.lang || "English"; $("f-cond").value = c.cond || "Near Mint"; $("f-grade").value = c.grade || "";
-  $("f-qty").value = c.qty ?? 1; $("f-paid").value = c.paid ?? ""; $("f-mkt").value = c.market ?? ""; $("f-notes").value = c.notes || "";
+  $("f-qty").value = c.qty ?? 1; $("f-tl").value = c.tl || ""; $("f-paid").value = c.paid ?? ""; $("f-mkt").value = c.market ?? ""; $("f-notes").value = c.notes || "";
   drawGameSeg(); fillRarity(c.rarity); drawTags(); drawPhotos(); drawLinked();
   $("f-del").style.display = id ? "" : "none"; $("f-del").textContent = "Delete"; $("f-msg").textContent = "";
   syncForm();
@@ -393,7 +393,7 @@ $("f-save").onclick = async () => {
   const c = {...(old || {}), id: editing || newId("c"), game: form.game, name, set: $("f-set").value.trim(), num: $("f-num").value.trim(),
     rarity: $("f-rar").value, lang: $("f-lang").value, cond: $("f-cond").value, grade: $("f-cond").value === "Graded" ? $("f-grade").value.trim() : "",
     qty: Math.max(0, Math.round(+$("f-qty").value || 0)), paid: $("f-paid").value === "" ? "" : +$("f-paid").value, market,
-    notes: $("f-notes").value.trim(), tags: form.tags, photos: form.photos, added: old ? old.added : new Date().toISOString(),
+    tl: $("f-tl").value, notes: $("f-notes").value.trim(), tags: form.tags, photos: form.photos, added: old ? old.added : new Date().toISOString(),
     priced: market === "" ? (old ? old.priced : "") : (old && +old.market === market && old.priced ? old.priced : new Date().toISOString()),
     ref: L ? L.ref : null, img: L ? L.img : "", imgLg: L ? L.imgLg : "", tcgId: L ? L.tcgId : null, variants: L ? L.variants : {}, trend: L ? L.trend : null};
   delete c.demo;
