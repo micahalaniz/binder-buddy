@@ -8,7 +8,11 @@ import { lineChart } from "./chart.js";
 import { openPicker } from "./picker.js";
 
 export const filt = {game: "all", tag: "", hits: false};
-export const saveCard = c => { cards.set(c.id, c); return db.put("cards", c); };
+// save to memory and to the device; if the device save fails (storage full), undo the memory change so nothing looks saved that isn't
+export const saveCard = async c => {
+  const old = cards.get(c.id); cards.set(c.id, c);
+  try { await db.put("cards", c); } catch (e) { if (old) cards.set(c.id, old); else cards.delete(c.id); throw e; }
+};
 
 // ================================================================== list
 function matches(c, words) {
@@ -157,6 +161,7 @@ export async function updatePrices(quiet = false) {
     for (const c of cards.values()) if (c.ref) await db.put("cards", c);
     for (const w of wants.values()) if (w.ref) await db.put("wants", w);
     S.lastPriced = new Date().toISOString(); saveS();
+    emit("prices:updated");
     if (!quiet || res.failed) toast(res.failed ? `Updated ${res.total - res.failed} prices. ${res.failed} couldn't be reached, try again later.` : `Prices updated for ${res.total} cards`);
   } catch (e) { if (!quiet) toast("Couldn't update prices right now."); }
   btn.textContent = label; btn.disabled = false; refreshing = false;
@@ -179,6 +184,7 @@ export async function openDetail(id) {
         <div class="pricebig" style="margin-top:10px">${moneyOr(c.market)}</div>
         <div class="note">${c.market !== "" && c.market != null ? `market value each${n > 1 ? ` · ${n} × = <b>${money(n * c.market)}</b>` : ""}` : ""}${c.ref ? " · updates daily" : ""}</div>
         ${m ? `<div class="${m.abs >= 0 ? "up" : "down"}" style="font-weight:800;margin-top:4px">${m.abs >= 0 ? "▲" : "▼"} ${signed(m.abs)} (${m.pct}%) since ${esc(m.since)}</div>` : ""}
+        ${gradedInfo(c)}${c.kind === "sealed" && +c.msrp > 0 && +c.market > 0 ? `<p class="note" style="margin-top:6px">📦 Store price ${money(c.msrp)}. Now ${+c.market >= +c.msrp ? `${Math.round((c.market / c.msrp - 1) * 100)}% over` : `${Math.round((1 - c.market / c.msrp) * 100)}% under`} store price.</p>` : ""}
         <dl class="kv">
           <dt>I have</dt><dd>${n}</dd>
           ${c.paid !== "" && c.paid != null ? `<dt>I paid</dt><dd>${money(c.paid)} each (${signed((+c.market || 0) * n - c.paid * n)} total)</dd>` : ""}
@@ -191,6 +197,7 @@ export async function openDetail(id) {
         </div>
       </div>
     </div>
+    ${c.cond !== "Graded" && +c.market >= 5 ? worthGrading(c) : ""}
     <h3>📈 Price history</h3>
     <div id="d-hist"><p class="note"><span class="spin"></span> Loading…</p></div>
     <h3>🔎 Check real sold prices</h3>
@@ -200,9 +207,39 @@ export async function openDetail(id) {
   $("d-edit").onclick = () => { closeSheet("m-detail"); openEdit(c.id); };
   $("d-trade").onclick = () => { closeSheet("m-detail"); emit("trade:give", c.id); };
   if ($("d-link")) $("d-link").onclick = () => linkExisting(c);
+  if ($("wg-val")) {
+    const calc = () => {
+      c.gv = $("wg-val").value === "" ? "" : +$("wg-val").value; c.gf = $("wg-fee").value === "" ? "" : +$("wg-fee").value;
+      db.put("cards", c);
+      const out = $("wg-out");
+      if (c.gv === "" || c.gf === "") { out.innerHTML = ""; return; }
+      const gain = c.gv - c.gf - (+c.market || 0);
+      out.innerHTML = `<div class="verdict ${gain > 0 ? "ok" : "bad"}" style="margin-top:8px"><p style="margin:0;font-weight:800">${gain > 0
+        ? `If it gets that grade, you'd come out about ${money(gain)} ahead of selling it raw.`
+        : `Not worth it at that grade: you'd be about ${money(-gain)} behind selling it raw.`}</p>
+        <p class="note" style="margin:6px 0 0">Not every card gets the top grade. Check centering, corners, edges and surface under a bright light first. A lower grade can be worth less than raw.</p></div>`;
+    };
+    $("wg-val").oninput = calc; $("wg-fee").oninput = calc; calc();
+  }
   $("d-body").querySelectorAll("[data-zoom]").forEach(el => el.onclick = () => openLB(c.id, el.dataset.zoom === "official" ? pics.length : +el.dataset.zoom || 0));
   openSheet("m-detail");
   drawHistory(c);
+}
+// Graded cards: your graded value vs. a raw copy (card databases only price raw cards).
+function gradedInfo(c) {
+  if (c.cond !== "Graded") return "";
+  const raw = c.raw === "" || c.raw == null ? null : +c.raw;
+  if (c.market === "" || c.market == null) return `<p class="note" style="margin-top:6px">🏅 Add what a ${esc(c.grade || "graded copy")} sells for (✏️ Edit). Check eBay sold listings below.${raw != null ? ` A raw copy is ${money(raw)} today.` : ""}</p>`;
+  return raw ? `<p class="note" style="margin-top:6px">🏅 ${esc(c.grade || "Graded")} value you entered. A raw copy is <b>${money(raw)}</b> today${+c.market > raw ? `, so the slab adds about ${money(c.market - raw)} (${(c.market / raw).toFixed(1)}×)` : ""}.</p>`
+    : `<p class="note" style="margin-top:6px">🏅 ${esc(c.grade || "Graded")} value you entered. It doesn't update by itself: recheck sold prices now and then.</p>`;
+}
+function worthGrading(c) {
+  return `<details class="panel" style="margin-top:12px"${c.gv !== undefined && c.gv !== "" ? " open" : ""}><summary><b>🏅 Worth grading?</b></summary>
+    <p class="note">Look up what this card sells for graded (<a href="https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent([c.name, c.num, "PSA 10", (GAMES[c.game] || {}).word].filter(Boolean).join(" "))}&LH_Sold=1&LH_Complete=1" target="_blank" rel="noopener">PSA 10 sold on eBay</a>), then enter it with what grading costs you (fee plus shipping both ways).</p>
+    <div class="g2"><div class="f"><label for="wg-val">A graded copy sells for</label><input id="wg-val" type="number" min="0" step="0.01" inputmode="decimal" value="${c.gv ?? ""}" placeholder="e.g. PSA 10 price"></div>
+      <div class="f"><label for="wg-fee">Grading cost, all in</label><input id="wg-fee" type="number" min="0" step="0.01" inputmode="decimal" value="${c.gf ?? ""}"></div></div>
+    <p class="note">Raw copy today: <b>${money(c.market)}</b></p>
+    <div id="wg-out" aria-live="polite"></div></details>`;
 }
 async function drawHistory(c) {
   const box = $("d-hist"), parts = [];
@@ -241,7 +278,7 @@ function linkExisting(c) {
 /** The fields a card gets from a database match. */
 export function linkFields(r, wantV) {
   const v = pickVariant(r.variants || {}, wantV);
-  return {ref: {src: r.src, id: r.id, v}, img: r.img || "", imgLg: r.imgLg || "", tcgId: r.tcgId || null, variants: r.variants || {}, trend: r.trend || null,
+  return {ref: {src: r.src, id: r.id, v}, ...(r.setCode ? {setCode: r.setCode} : {}), img: r.img || "", imgLg: r.imgLg || "", tcgId: r.tcgId || null, variants: r.variants || {}, trend: r.trend || null,
     market: v && r.variants[v] != null ? r.variants[v] : (r.market ?? ""), priced: new Date().toISOString()};
 }
 
@@ -282,18 +319,20 @@ export function openEdit(id, pre = {}, onSaved = null) {
   else if (pre.src) c = {...base, game: pre.game, name: pre.name, set: pre.set, num: pre.num, rarity: pre.rarity, ...linkFields(pre), qty: pre.qty || 1, paid: pre.paid ?? ""};
   else c = {...base, ...pre};
   form = {game: c.game, photos: [...(c.photos || [])], tags: [...(c.tags || [])], newPhotos: [], removed: [], uploading: 0,
-    link: c.ref ? {ref: {...c.ref}, img: c.img, imgLg: c.imgLg, tcgId: c.tcgId, variants: c.variants || {}, trend: c.trend || null} : null};
+    link: c.ref ? {ref: {...c.ref}, setCode: c.setCode || "", img: c.img, imgLg: c.imgLg, tcgId: c.tcgId, variants: c.variants || {}, trend: c.trend || null} : null};
   $("e-title").textContent = id ? "Edit card" : "Add a card";
   $("f-name").value = c.name || ""; $("f-set").value = c.set || ""; $("f-num").value = c.num || "";
   $("f-lang").value = c.lang || "English"; $("f-cond").value = c.cond || "Near Mint"; $("f-grade").value = c.grade || "";
   $("f-qty").value = c.qty ?? 1; $("f-tl").value = c.tl || ""; $("f-paid").value = c.paid ?? ""; $("f-mkt").value = c.market ?? ""; $("f-notes").value = c.notes || "";
-  drawGameSeg(); fillRarity(c.rarity); drawTags(); drawPhotos(); drawLinked();
+  form.kind = c.kind === "sealed" ? "sealed" : "card"; $("f-prod").value = c.product || "Booster pack"; $("f-msrp").value = c.msrp ?? "";
+  drawGameSeg(); fillRarity(c.rarity); drawTags(); drawPhotos(); drawLinked(); drawKind();
   $("f-del").style.display = id ? "" : "none"; $("f-del").textContent = "Delete"; $("f-msg").textContent = "";
-  syncForm();
+  if (form.kind !== "sealed") syncForm();
   openSheet("m-edit", id || pre.src ? "#f-qty" : "#f-name");
 }
 function drawLinked() {
   const L = form.link;
+  if (form.kind === "sealed") { $("e-linked").innerHTML = ""; return; }
   if (!L) {
     $("e-linked").innerHTML = `<div class="linked"><span>🔎 Pick it from the card list to fill this in and get daily prices.</span><button class="btn small" id="e-find">Find card</button></div>`;
     $("e-find").onclick = () => openPicker({game: form.game, text: $("f-name").value.trim(), onPick: r => {
@@ -312,6 +351,17 @@ function drawLinked() {
   $("f-v").innerHTML = vs.map(v => `<option value="${v}" ${v === L.ref.v ? "selected" : ""}>${esc(VARIANT_NAMES[v] || v)} · ${money(L.variants[v])}</option>`).join("");
 }
 $("f-v").onchange = e => { form.link.ref.v = e.target.value; $("f-mkt").value = form.link.variants[e.target.value]; };
+// Single card or sealed product (booster box, ETB…). Card databases don't price sealed, so you enter its value.
+function drawKind() {
+  seg($("f-kind"), [["card", "🃏 Single card"], ["sealed", "📦 Sealed product"]], form.kind, v => { form.kind = v; if (v === "sealed") form.link = null; drawKind(); drawLinked(); });
+  const sealed = form.kind === "sealed";
+  document.querySelectorAll("#m-edit .cardonly").forEach(el => el.hidden = sealed);
+  document.querySelectorAll("#m-edit .sealedonly").forEach(el => el.hidden = !sealed);
+  $("f-namel").textContent = sealed ? "Product name *" : "Card name *";
+  $("f-name").placeholder = sealed ? "Like Surging Sparks Elite Trainer Box" : "Card name";
+  if (sealed) { $("f-mktl").textContent = "Market value (each)"; $("f-mktn").hidden = false; $("f-mktn").textContent = "Card databases don't price sealed products. Check TCGplayer or eBay sold, then update this now and then."; }
+  else syncForm();
+}
 function drawGameSeg() {
   seg($("f-game"), Object.keys(GAMES).filter(g => S.games.includes(g) || g === form.game).map(g => [g, GAMES[g].name]), form.game, v => {
     if (v === form.game) return;
@@ -330,8 +380,18 @@ $("f-tags").addEventListener("click", e => {
   const b = e.target.closest("[data-t]"); if (!b) return;
   const t = b.dataset.t; form.tags = form.tags.includes(t) ? form.tags.filter(x => x !== t) : [...form.tags, t]; drawTags();
 });
-function syncForm() { $("gradeBox").style.visibility = $("f-cond").value === "Graded" ? "visible" : "hidden"; }
-$("f-cond").addEventListener("input", syncForm);
+const rawOf = L => L && L.ref && L.variants && L.variants[L.ref.v] != null ? +L.variants[L.ref.v] : null;
+function syncForm(switching = false) {
+  const g = $("f-cond").value === "Graded";
+  $("gradeBox").style.visibility = g ? "visible" : "hidden";
+  $("f-mktl").textContent = g ? "Graded value (each): what this grade sells for" : "Market value (each)";
+  const raw = form && rawOf(form.link);
+  // switching to Graded: the filled-in price is for a raw copy, which would be wrong for a slab
+  if (switching && g && raw != null && $("f-mkt").value !== "" && +$("f-mkt").value === raw) $("f-mkt").value = "";
+  $("f-mktn").hidden = !g;
+  $("f-mktn").textContent = g ? `Card databases only price raw (ungraded) copies${raw != null ? `: ${money(raw)} today` : ""}. Check eBay sold listings for the same grade, then type it here.` : "";
+}
+$("f-cond").addEventListener("input", () => syncForm(true));
 
 async function drawPhotos() {
   const items = await Promise.all(form.photos.map(async (id, i) => `<div class="ph${i === 0 ? " cover" : ""}"><img src="${await photoURL(id)}" alt="My photo ${i + 1}">
@@ -393,12 +453,16 @@ $("f-save").onclick = async () => {
   const c = {...(old || {}), id: editing || newId("c"), game: form.game, name, set: $("f-set").value.trim(), num: $("f-num").value.trim(),
     rarity: $("f-rar").value, lang: $("f-lang").value, cond: $("f-cond").value, grade: $("f-cond").value === "Graded" ? $("f-grade").value.trim() : "",
     qty: Math.max(0, Math.round(+$("f-qty").value || 0)), paid: $("f-paid").value === "" ? "" : +$("f-paid").value, market,
+    kind: form.kind === "sealed" ? "sealed" : "", product: form.kind === "sealed" ? $("f-prod").value : "", msrp: form.kind === "sealed" && $("f-msrp").value !== "" ? +$("f-msrp").value : "",
+    raw: $("f-cond").value === "Graded" ? (old && old.raw != null && old.raw !== "" ? old.raw : old && old.cond !== "Graded" && old.market !== "" ? old.market : rawOf(L) ?? "") : "",   // newest raw price comes from the daily update
     tl: $("f-tl").value, notes: $("f-notes").value.trim(), tags: form.tags, photos: form.photos, added: old ? old.added : new Date().toISOString(),
     priced: market === "" ? (old ? old.priced : "") : (old && +old.market === market && old.priced ? old.priced : new Date().toISOString()),
-    ref: L ? L.ref : null, img: L ? L.img : "", imgLg: L ? L.imgLg : "", tcgId: L ? L.tcgId : null, variants: L ? L.variants : {}, trend: L ? L.trend : null};
+    ref: L ? L.ref : null, setCode: L ? L.setCode || "" : "", img: L ? L.img : "", imgLg: L ? L.imgLg : "", tcgId: L ? L.tcgId : null, variants: L ? L.variants : {}, trend: L ? L.trend : null};
+  if (c.kind === "sealed") Object.assign(c, {num: "", rarity: "", cond: "Near Mint", grade: "", raw: "", ref: null, variants: {}});
   delete c.demo;
   logPrice(c);
-  await saveCard(c);
+  try { await saveCard(c); }
+  catch (e) { $("f-msg").textContent = e.name === "QuotaExceededError" ? "Not saved: your phone's storage is full. Remove a photo or free up space." : "Not saved. Please try again."; return; }
   await dropPhotos(form.removed.filter(id => !form.photos.includes(id)));
   form = null;
   closeSheet("m-edit"); answer(); toast(old ? "Saved" : "Added to your binder");
@@ -441,3 +505,4 @@ $("demoBanner").addEventListener("click", e => { if (e.target.id === "clearDemo"
 $("addBtn").onclick = () => openPicker({game: filt.game !== "all" ? filt.game : undefined, onPick: r => openEdit(null, r), onManual: (g, t) => openEdit(null, {game: g, name: t})});
 on("render", render);
 export { CONDS };
+on("detail", openDetail);

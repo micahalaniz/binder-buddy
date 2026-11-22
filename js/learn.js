@@ -14,6 +14,7 @@ const KEY = "bb-learn", MAX = 400, REPO = "https://github.com/micahalaniz/binder
 export function codeKeys(p) {
   const k = [];
   if (p.opId) k.push("op:" + p.opId);
+  if (p.ygoCode) k.push("ygo:" + p.ygoCode);
   if (p.lorSet && p.lorNum) k.push("lor:" + p.lorSet + "/" + p.lorNum);
   if (p.num && p.total) k.push("pk:" + normNum(p.num) + "/" + normNum(p.total));
   return k;

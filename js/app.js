@@ -12,6 +12,9 @@ import { openScan } from "./scanui.js";
 import { openShare } from "./share.js";
 import { openWelcome } from "./more.js";
 import { openFriend, drawPanel } from "./tradelink.js";
+import "./sets.js";
+import "./alerts.js";
+import "./care.js";
 
 // ---------------------------------------------------------------- tabs (also reachable as #wish, #trade, #check, #more)
 const VIEWS = ["binder", "wish", "trade", "check", "more"];
@@ -32,6 +35,7 @@ window.addEventListener("hashchange", () => showTab(location.hash.slice(1), fals
 // ---------------------------------------------------------------- buttons that open things
 const addCard = () => openPicker({onPick: r => openEdit(null, r), onManual: (g, t) => openEdit(null, {game: g, name: t})});
 $("scanBtn").onclick = openScan;
+$("sealedBtn").onclick = () => openEdit(null, {kind: "sealed"});
 $("shareBtn").onclick = openShare;
 on("empty:add", addCard);
 on("empty:scan", openScan);

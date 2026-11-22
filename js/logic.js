@@ -20,6 +20,16 @@ export const GAMES = {
     rar: ["Common", "Uncommon", "Rare", "Promo", "Super Rare", "Legendary", "Epic", "Enchanted", "Iconic"],
     hitFrom: "Legendary", tcg: "lorcana-tcg", word: "lorcana",
   },
+  mtg: {
+    name: "Magic", color: "#c86a1d",
+    rar: ["Common", "Uncommon", "Rare", "Special", "Mythic Rare", "Bonus"],
+    hitFrom: "Rare", tcg: "magic", word: "mtg",
+  },
+  ygo: {
+    name: "Yu-Gi-Oh!", color: "#8a5a12",
+    rar: ["Common", "Short Print", "Rare", "Super Rare", "Ultra Rare", "Ultimate Rare", "Secret Rare", "Prismatic Secret Rare", "Collector's Rare", "Ghost Rare", "Starlight Rare", "Quarter Century Secret Rare"],
+    hitFrom: "Ultra Rare", tcg: "yugioh", word: "yugioh",
+  },
 };
 export const CONDS = ["Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged", "Graded"];
 
@@ -61,6 +71,8 @@ export function mapRarity(game, raw, name = "") {
     if (n.includes("(parallel)") || n.includes("alternate art")) return "Alternate Art / Parallel";
     return {c: "Common (C)", uc: "Uncommon (UC)", r: "Rare (R)", l: "Leader (L)", p: "Promo (P)", pr: "Promo (P)", sr: "Super Rare (SR)"}[r] || (r ? "Other" : "");
   }
+  if (game === "ygo") { const hit = GAMES.ygo.rar.find(x => x.toLowerCase() === r); return hit || (/quarter century/.test(r) ? "Quarter Century Secret Rare" : /starlight/.test(r) ? "Starlight Rare" : /ghost/.test(r) ? "Ghost Rare" : /secret/.test(r) ? "Secret Rare" : /ultimate/.test(r) ? "Ultimate Rare" : /ultra/.test(r) ? "Ultra Rare" : /super/.test(r) ? "Super Rare" : /rare/.test(r) ? "Rare" : /common/.test(r) ? "Common" : r ? "Other" : ""); }
+  if (game === "mtg") return {common: "Common", uncommon: "Uncommon", rare: "Rare", mythic: "Mythic Rare", special: "Special", bonus: "Bonus"}[r] || (r ? "Other" : "");
   if (game === "lorcana") {
     const hit = GAMES.lorcana.rar.find(x => x.toLowerCase() === r);
     return hit || (r ? "Other" : "");
@@ -137,7 +149,7 @@ export function parseBulkLine(line) {
   const p = line.split(/\t|,/).map(s => s.trim());
   if (p.length < 2 || !p[1]) return null;
   const gk = p[0].toLowerCase().replace(/[^a-z]/g, "");
-  const game = gk.startsWith("one") ? "onepiece" : gk.startsWith("lor") ? "lorcana" : gk.startsWith("pok") ? "pokemon" : null;
+  const game = gk.startsWith("one") ? "onepiece" : gk.startsWith("lor") ? "lorcana" : gk.startsWith("pok") ? "pokemon" : gk.startsWith("magic") || gk === "mtg" ? "mtg" : gk.startsWith("yugi") || gk === "ygo" ? "ygo" : null;
   if (!game) return null;
   const condTxt = p[5] || "";
   const cond = CONDS.find(c => c.toLowerCase() === condTxt.toLowerCase()) || (/^(psa|bgs|cgc|sgc|tag|ace)/i.test(condTxt) ? "Graded" : "Near Mint");
@@ -161,6 +173,9 @@ export function parseCardText(text) {
     const m = t.toUpperCase().match(/\b[O0Q][P5R]\s?([O0\d]{2})\s?[-–—]\s?(\d{3})\b/);
     if (m) out.opId = `OP${m[1].replace(/O/g, "0")}-${m[2]}`;
   }
+  // Yu-Gi-Oh!: LOB-EN001, CT13-EN003, MP24-EN123 (set code, language, number)
+  const yg = t.toUpperCase().match(/\b([A-Z0-9]{2,5})-(EN|DE|FR|IT|SP|PT|E)(\d{3})\b/);
+  if (yg) out.ygoCode = `${yg[1]}-${yg[2]}${yg[3]}`;
   // Lorcana: "207/204 • EN • 1"
   const lo = t.match(/\b(\d{1,3})\s*\/\s*(\d{2,3})\s*[•·.*°o+»«-]?\s*E\s?N\s*[•·.*°o+»«-]?\s*(\d{1,2})\b/i);
   if (lo) { out.lorNum = String(+lo[1]); out.lorSet = String(+lo[3]); }

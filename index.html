@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Binder Buddy: free card collection tracker for Pokémon, One Piece and Lorcana</title>
-<meta name="description" content="Free, private card binder for Pokémon, One Piece and Disney Lorcana. Scan cards, see live prices and price history, check trades, and spot scalper prices. No account, no ads.">
+<title>Binder Buddy: free card collection tracker for Pokémon, One Piece, Lorcana and Magic</title>
+<meta name="description" content="Free, private card binder for Pokémon, One Piece, Disney Lorcana, Magic and Yu-Gi-Oh!. Scan cards, see live prices and price history, check trades, and spot scalper prices. No account, no ads.">
 <meta name="theme-color" content="#3466af">
 <meta property="og:title" content="Binder Buddy: free card binder for collectors">
-<meta property="og:description" content="Scan your cards, see live prices, check if a trade is fair, and spot scalper prices. Pokémon, One Piece and Lorcana. Free, private, no ads.">
+<meta property="og:description" content="Scan your cards, see live prices, check if a trade is fair, and spot scalper prices. Pokémon, One Piece, Lorcana and Magic. Free, private, no ads.">
 <meta property="og:image" content="https://micahalaniz.github.io/binder-buddy/docs/og.png">
 <meta property="og:url" content="https://micahalaniz.github.io/binder-buddy/">
 <meta name="twitter:card" content="summary_large_image">
@@ -25,7 +25,7 @@
     <h1 id="appTitle">📒 Binder Buddy</h1>
     <button class="iconbtn" id="openSettings" title="Make it yours" aria-label="Customize colors and layout">🎨</button>
   </div>
-  <div class="sub" id="appSub">Pokémon · One Piece · Disney Lorcana. Free for collectors, forever.</div>
+  <div class="sub" id="appSub">Pokémon · One Piece · Lorcana · Magic · Yu-Gi-Oh! Free for collectors, forever.</div>
 </div></header>
 
 <main>
@@ -37,6 +37,8 @@
       <div class="answer" id="answer" aria-live="polite"></div>
     </div>
     <div id="demoBanner"></div>
+    <div id="alerts"></div>
+    <div id="care"></div>
     <div class="panel" id="valuePanel">
       <div class="valuebox">
         <div><div class="note">My collection is worth</div><div class="hero" id="s-val">$0.00</div></div>
@@ -63,6 +65,8 @@
       </select>
       <select id="tagFilter" aria-label="Filter by tag"></select>
       <button class="btn ghost" id="hitsBtn" aria-pressed="false">⭐ Hits only</button>
+      <button class="btn ghost" id="setsBtn">📚 Sets</button>
+      <button class="btn ghost" id="sealedBtn">📦 Add sealed</button>
       <button class="btn ghost" id="bundleBtn">💰 Bundle value</button>
       <button class="btn ghost" id="shareBtn">📤 Share my hits</button>
     </div>
@@ -184,6 +188,9 @@
         <li><b>Disney Lorcana:</b> <a href="https://lorcast.com" target="_blank" rel="noopener">Lorcast</a> (daily market prices)</li>
         <li><b>One Piece:</b> <a href="https://optcgapi.com" target="_blank" rel="noopener">OPTCG API</a> (TCGplayer market prices and 2-week history)</li>
         <li><b>Card scanner:</b> <a href="https://github.com/naptha/tesseract.js" target="_blank" rel="noopener">Tesseract.js</a>, which reads the photo on your device. Your photos are never uploaded.</li>
+        <li><b>Magic: The Gathering:</b> card data, pictures and daily TCGplayer prices from <a href="https://scryfall.com" target="_blank" rel="noopener">Scryfall</a>. Card images © Wizards of the Coast. Binder Buddy isn't made or endorsed by Wizards of the Coast or Scryfall.</li>
+        <li><b>Yu-Gi-Oh!:</b> card data and prices per printing from <a href="https://ygoprodeck.com" target="_blank" rel="noopener">YGOPRODeck</a>. Official card pictures aren't shown because YGOPRODeck asks apps not to load them from its site, so add your own photo. Yu-Gi-Oh! is © Konami.</li>
+        <li><b>QR codes:</b> <a href="https://github.com/kazuhikoarase/qrcode-generator" target="_blank" rel="noopener">qrcode-generator</a> by Kazuhiko Arase (MIT license), made on your device. QR Code is a trademark of DENSO WAVE.</li>
       </ul>
       <p class="note" id="affNote" hidden>Some "buy" links are affiliate links: if you buy through them, Binder Buddy may earn a small commission at no extra cost to you. It helps keep the app free.</p>
     </div>
@@ -199,7 +206,7 @@
 
 <nav class="tabs" aria-label="Sections">
   <button data-v="binder" class="on" aria-current="page"><span aria-hidden="true">📒</span>Binder</button>
-  <button data-v="wish"><span aria-hidden="true">⭐</span>Wishlist</button>
+  <button data-v="wish"><span aria-hidden="true">⭐</span>Wishlist<i class="dot" id="wishDot" hidden aria-label="(price alert)"></i></button>
   <button data-v="trade"><span aria-hidden="true">🤝</span>Trade</button>
   <button data-v="check"><span aria-hidden="true">🛡️</span>Price check</button>
   <button data-v="more"><span aria-hidden="true">☰</span>More</button>
@@ -232,19 +239,24 @@
   <h2 id="e-title">Add a card</h2>
   <div id="e-linked"></div>
   <div class="f"><label>Game</label><div class="seg" id="f-game"></div></div>
-  <div class="f"><label for="f-name">Card name *</label><input id="f-name" placeholder="Card name"></div>
-  <div class="g2">
-    <div class="f"><label for="f-set">Set</label><input id="f-set"></div>
-    <div class="f"><label for="f-num">Card number</label><input id="f-num"></div>
+  <div class="f"><label>What is it?</label><div class="seg" id="f-kind"></div></div>
+  <div class="f"><label for="f-name" id="f-namel">Card name *</label><input id="f-name" placeholder="Card name"></div>
+  <div class="g2 sealedonly" hidden>
+    <div class="f"><label for="f-prod">Product</label><select id="f-prod"><option>Booster pack</option><option>Sleeved booster</option><option>Booster bundle</option><option>Booster box</option><option>Elite Trainer Box</option><option>Collection box</option><option>Tin</option><option>Blister pack</option><option>Starter deck</option><option>Premium collection</option><option>Case</option><option>Other</option></select></div>
+    <div class="f"><label for="f-msrp">Store price (MSRP)</label><input id="f-msrp" type="number" min="0" step="0.01" inputmode="decimal" placeholder="optional"></div>
   </div>
   <div class="g2">
+    <div class="f"><label for="f-set">Set</label><input id="f-set"></div>
+    <div class="f cardonly"><label for="f-num">Card number</label><input id="f-num"></div>
+  </div>
+  <div class="g2 cardonly">
     <div class="f"><label for="f-rar">Rarity</label><select id="f-rar"></select></div>
     <div class="f" id="f-vbox"><label for="f-v">Version</label><select id="f-v"></select></div>
   </div>
-  <div class="g2">
+  <div class="g2 cardonly">
     <div class="f"><label for="f-cond">Condition</label>
       <select id="f-cond"><option>Near Mint</option><option>Lightly Played</option><option>Moderately Played</option><option>Heavily Played</option><option>Damaged</option><option>Graded</option></select></div>
-    <div class="f" id="gradeBox"><label for="f-grade">Grade</label><input id="f-grade" placeholder="PSA 10, BGS 9.5, CGC 10…"></div>
+    <div class="f" id="gradeBox"><label for="f-grade">Grade</label><input id="f-grade" placeholder="PSA 10, BGS 9.5, CGC 10…" list="gradeList"><datalist id="gradeList"><option>PSA 10</option><option>PSA 9</option><option>PSA 8</option><option>BGS 10 Black Label</option><option>BGS 9.5</option><option>BGS 9</option><option>CGC 10 Pristine</option><option>CGC 10</option><option>CGC 9.5</option><option>CGC 9</option><option>SGC 10</option><option>SGC 9.5</option><option>TAG 10</option><option>ACE 10</option></datalist></div>
   </div>
   <div class="f"><label for="f-lang">Language</label>
     <select id="f-lang"><option>English</option><option>Japanese</option><option>Chinese</option><option>Korean</option><option>French</option><option>German</option><option>Spanish</option><option>Italian</option><option>Portuguese</option><option>Other</option></select></div>
@@ -256,7 +268,7 @@
     <div class="f"><label for="f-qty">How many</label><input id="f-qty" type="number" min="0" step="1" inputmode="numeric"></div>
     <div class="f"><label for="f-paid">I paid (each)</label><input id="f-paid" type="number" min="0" step="0.01" inputmode="decimal"></div>
   </div>
-  <div class="f"><label for="f-mkt">Market value (each)</label><input id="f-mkt" type="number" min="0" step="0.01" inputmode="decimal"></div>
+  <div class="f"><label for="f-mkt" id="f-mktl">Market value (each)</label><input id="f-mkt" type="number" min="0" step="0.01" inputmode="decimal"><p class="note" id="f-mktn" hidden></p></div>
   <div class="f"><label for="f-tl">My trade binder</label>
     <select id="f-tl"><option value="">Not listed</option><option value="t">🔁 For trade</option><option value="s">💲 For sale</option><option value="ts">🔁💲 Trade or sell</option></select></div>
   <div class="f"><label>Tags</label><div class="tagpick" id="f-tags"></div></div>
@@ -381,6 +393,13 @@
   <div class="acts"><button class="btn ghost" id="bd-copy">Copy list to share</button><button class="btn" data-close>Done</button></div>
 </div></div>
 
+<!-- set progress -->
+<div class="modal" id="m-sets" role="dialog" aria-modal="true" aria-labelledby="st-title"><div class="sheet" tabindex="-1">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h2 id="st-title" tabindex="-1">📚 My sets</h2>
+  <div id="st-body" aria-live="polite"></div>
+</div></div>
+
 <!-- trade links: choose my cards -->
 <div class="modal" id="m-tlist" role="dialog" aria-modal="true" aria-labelledby="tl-title"><div class="sheet" tabindex="-1">
   <button class="x" data-close aria-label="Close">✕</button>
@@ -401,7 +420,8 @@
   <p class="note" id="ts-info"></p>
   <textarea id="ts-link" readonly rows="3" aria-label="My trade binder link" style="width:100%;font-size:12px"></textarea>
   <p class="note" id="ts-long" hidden>This link is long. Some chats (like Discord) cut long messages, so use Share, or list fewer cards.</p>
-  <div class="acts"><button class="btn ghost" id="ts-copy">Copy link</button><button class="btn" id="ts-send">Share…</button></div>
+  <div class="acts"><button class="btn ok" id="ts-showqr">📱 Show QR code</button><button class="btn ghost" id="ts-copy">Copy link</button><button class="btn" id="ts-send">Share…</button></div>
+  <div id="ts-qr" class="qrbox" hidden></div>
   <div class="where" style="border-color:var(--warn)"><b>🛡️ What's in the link</b>
     <p>Only your listed cards, your nickname and (if you chose) your wishlist. No name, no address, no account. Post it where you already trade, like your card shop's group. Under 18? Ask a parent first.</p></div>
 </div></div>

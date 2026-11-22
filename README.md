@@ -1,6 +1,6 @@
 # 📒 Binder Buddy
 
-**A free, private card binder for Pokémon, One Piece and Disney Lorcana collectors.**
+**A free, private card binder for Pokémon, One Piece, Disney Lorcana, Magic: The Gathering and Yu-Gi-Oh! collectors.**
 Scan your cards, see live prices and price history, check if a trade is fair, and spot scalper prices before you pay.
 
 **▶ Use it:** https://micahalaniz.github.io/binder-buddy/ (works on any phone; "Add to Home Screen" to install)
@@ -29,6 +29,11 @@ Collection apps charge a monthly subscription for the features collectors need m
 | 🔎 **Do I have it?** | Type any name, set, number or rarity and get an instant yes or no. |
 | ⭐ **Wishlist** | Set the most you'd pay, and it tells you when the market reaches your price. |
 | 🧠 **Learns from mistakes** | Pick the right card after a wrong scan and it remembers next time. 🚩 Report sends what it read (never your photo); checked fixes ship to everyone in `js/fixes.js`. |
+| 🏅 **Graded cards** | Your graded value is kept separate from the raw price (card databases only price raw copies), with a "Worth grading?" calculator and PSA 10 sold-price links. |
+| 📦 **Sealed products** | Booster boxes, ETBs, tins and more, with your value and how far over or under store price it is. |
+| 🔔 **Price alerts** | When you open the app: wishlist cards that hit your price and binder cards that moved 15% or more. |
+| 📚 **Set progress** | "142 of 191 in Surging Sparks" for every set you own cards in, chase cards (secret rares, enchanted, parallels) counted separately, missing cards shown greyed out with their price, and one tap to add a missing card to your wishlist. |
+| 📱 **Trade QR code** | Show your trade binder as a QR code at a card shop; a friend points their camera at it. Made on your device; long lists switch to a smaller link and the pictures fill in on their phone. |
 | 🔗 **Trade Links** | List cards for trade or sale and share one link. Whoever opens it sees matches with their wishlist and a suggested fair trade, including how much extra you are OK giving. The list rides in the part of the link after `#`, which browsers never send to a server, so there are no accounts and no database. |
 | 🤝 **Trade checker** | "I give" vs. "I get" at market value, with a clear fair / ahead / behind call. It updates your binder when the trade is done. |
 | 🛡️ **Scalper Shield** | Compares an asking price to market value (singles) or store price (sealed) on a gauge, with tips for beating scalpers. |
@@ -41,7 +46,7 @@ Collection apps charge a monthly subscription for the features collectors need m
 
 - **No backend at all.** It's a static site on GitHub Pages, so hosting costs $0 and there's no server to leak data from.
 - **Local-first:** cards, photos (as compressed JPEG blobs), the wishlist and price logs live in **IndexedDB**. Settings and value history live in `localStorage`.
-- **Open data:** [TCGdex](https://tcgdex.dev) (Pokémon), [Lorcast](https://lorcast.com) (Lorcana) and [OPTCG API](https://optcgapi.com) (One Piece). All are free, keyless and CORS-enabled. Results are normalized into one card shape (`js/catalog.js`), cached in IndexedDB, and rate-limited politely (Lorcast asks for 50–100 ms between calls).
+- **Open data:** [TCGdex](https://tcgdex.dev) (Pokémon), [Lorcast](https://lorcast.com) (Lorcana) and [OPTCG API](https://optcgapi.com) (One Piece) and [Scryfall](https://scryfall.com) (Magic; card images © Wizards of the Coast, shown unaltered per Scryfall's guidelines) and [YGOPRODeck](https://ygoprodeck.com) (Yu-Gi-Oh!, priced per printing; no official pictures because YGOPRODeck asks apps not to hotlink them). All are free, keyless and CORS-enabled. Results are normalized into one card shape (`js/catalog.js`), cached in IndexedDB, and rate-limited politely (Lorcast asks for 50–100 ms between calls).
 - **On-device OCR:** [Tesseract.js](https://github.com/naptha/tesseract.js) runs in a Web Worker and is lazy-loaded on the first scan. Each pocket is cropped, greyscaled and contrast-boosted. It reads the whole card, then zooms on the code strip and stops early once an exact code is found. Pokémon codes like `025/165` are matched by finding sets with 165 cards, then fetching card 025 in each.
 - **Charts** are hand-built SVG (no chart library) with a touch crosshair/tooltip and a screen-reader table.
 - **Vanilla JS, ES modules, no build step, no dependencies.**

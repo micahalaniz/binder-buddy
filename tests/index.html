@@ -29,10 +29,16 @@ test("One Piece rarities use the card name for parallels and manga", () => {
   eq(L.mapRarity("onepiece", "L", "Luffy"), "Leader (L)");
   eq(L.mapRarity("onepiece", "TR", "Zoro"), "Treasure Rare (TR)");
 });
-test("Lorcana rarities", () => {
+test("Lorcana and Magic rarities", () => {
   eq(L.mapRarity("lorcana", "Super_rare"), "Super Rare");
   eq(L.mapRarity("lorcana", "Enchanted"), "Enchanted");
   eq(L.mapRarity("lorcana", "Iconic"), "Iconic");
+  eq(L.mapRarity("mtg", "mythic"), "Mythic Rare");
+  eq(L.mapRarity("mtg", "common"), "Common");
+  eq(L.mapRarity("ygo", "Quarter Century Secret Rare"), "Quarter Century Secret Rare");
+  eq(L.mapRarity("ygo", "Platinum Secret Rare"), "Secret Rare");
+  eq(L.parseBulkLine("magic, Lightning Bolt, Alpha, 161, R").game, "mtg");
+  eq(L.isHit({game: "mtg", rarity: "Mythic Rare"}), true);
 });
 test("hits: rarity threshold, graded, or has my photo", () => {
   eq(L.isHit({game: "pokemon", rarity: "Ultra Rare"}), true);
@@ -77,7 +83,9 @@ test("bulk add lines", () => {
   const p = L.parseBulkLine("pokemon, Pikachu ex, Surging Sparks, 238/191, SIR, Near Mint, 1, 40, 55");
   eq([p.game, p.name, p.num, p.rarity, p.qty, p.paid, p.market], ["pokemon", "Pikachu ex", "238/191", "Special Illustration Rare (SIR)", 1, 40, 55]);
   eq(L.parseBulkLine("one piece, Shanks, Romance Dawn, OP01-120, SEC, PSA 10").cond, "Graded");
-  eq(L.parseBulkLine("magic, Black Lotus"), null);
+  eq(L.parseBulkLine("magic, Black Lotus").game, "mtg");
+  eq(L.parseBulkLine("yugioh, Dark Magician").game, "ygo");
+  eq(L.parseBulkLine("digimon, Agumon"), null);   // not supported yet
   eq(L.parseBulkLine("pokemon"), null);
 });
 test("scanner text: card codes for each game", () => {
@@ -90,6 +98,8 @@ test("scanner text: card codes for each game", () => {
   eq(L.parseCardText("De The oi 0501-120 @").opId, "OP01-120");
   eq(L.parseCardText("0PO5-061").opId, "OP05-061");
   eq(L.parseCardText("238/191").opId, undefined);
+  eq(L.parseCardText("ATK/2500 LOB-EN001 1st Edition").ygoCode, "LOB-EN001");
+  eq(L.parseCardText("OP01-120").ygoCode, undefined);
   eq(L.parseCardText("TG12/TG30").num, "TG12");
 });
 test("price links: exact TCGplayer page when we know the product", () => {

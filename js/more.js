@@ -81,6 +81,7 @@ $("exportBtn").onclick = async () => {
   for (const c of cards.values()) for (const id of c.photos || []) { const b = await db.get("photos", id); if (b) photos[id] = await b64(b); }
   const data = JSON.stringify({app: "binder-buddy", version: 2, saved: new Date().toISOString(), settings: S, cards: [...cards.values()], wants: [...wants.values()], history: history(), learn: loadLocal("bb-learn", []), friends: loadLocal("bb-friends", []), photos});
   download(new Blob([data], {type: "application/json"}), "binder-buddy-backup-" + new Date().toISOString().slice(0, 10) + ".json");
+  S.lastBackup = new Date().toISOString(); saveS(); emit("data");
   toast("Backup saved to your downloads");
 };
 $("importBtn").onclick = () => $("importFile").click();

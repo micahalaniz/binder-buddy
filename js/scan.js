@@ -3,7 +3,7 @@
 // card up in the free card databases. Photos never leave the phone; only the OCR program itself is
 // downloaded (once) from the jsDelivr CDN the first time you scan.
 import { parseCardText, normNum } from "./logic.js";
-import { search, card, onePieceByCode, lorcanaBySetNum, pokemonSetsByTotal } from "./catalog.js";
+import { search, card, onePieceByCode, lorcanaBySetNum, pokemonSetsByTotal, ygoByCode } from "./catalog.js";
 import { loadImg } from "./util.js";
 import { recall } from "./learn.js";
 
@@ -54,6 +54,7 @@ export async function identify(text, gameHint = "auto") {
   const add = list => { for (const c of list || []) if (c && !seen.has(c.src + c.id)) { seen.add(c.src + c.id); out.push(c); } };
   const allow = g => gameHint === "auto" || gameHint === g;
   if (p.opId && allow("onepiece")) add(await onePieceByCode(p.opId));
+  if (!out.length && p.ygoCode && allow("ygo")) { try { add(await ygoByCode(p.ygoCode)); } catch (e) {} }
   if (!out.length && p.lorSet && allow("lorcana")) { try { add([await lorcanaBySetNum(p.lorSet, p.lorNum)]); } catch (e) {} }
   if (!out.length && p.num && p.total && allow("pokemon")) {
     // "025/165": find sets with 165 cards, then ask for card 025 in each

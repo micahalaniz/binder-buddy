@@ -97,7 +97,7 @@
     <div>🧠 On-device<br><span style="font-weight:600">Tesseract.js OCR · SVG charts</span></div><i>⇄</i>
     <div>🌐 Open card data<br><span style="font-weight:600">TCGdex · Lorcast · OPTCG API</span></div>
   </div>
-  <p>There is no backend. The app is a static site on GitHub Pages. Three community databases, each with a different shape, are normalized into one card model, so every screen can treat Pokémon, One Piece and Lorcana the same:</p>
+  <p>There is no backend. The app is a static site on GitHub Pages. Three community databases, each with a different shape, are normalized into one card model, so every screen can treat Pokémon, One Piece, Lorcana and Magic the same:</p>
 <pre>{ game, src, id, name, set, num, rarity, img, tcgId,
   variants: { holofoil: 217.61, reverse-holofoil: 3.10 },  // USD market prices
   v: "holofoil", market: 217.61, trend }</pre>
@@ -132,11 +132,24 @@
   <h2>Design decisions</h2>
   <ul>
     <li><b>Kid-safe defaults:</b> "Share my hits" hides prices unless you turn them on. There's no chat or social feed, and the trade guide starts with "Under 18? Trade online only with a parent."</li>
-    <li><b>Trade Links instead of accounts and chat:</b> the cards you list are compressed into the part of a share link after <code>#</code>, which browsers never send to any server. A friend opens it and the app matches their wishlist and suggests a fair trade (a small subset search that prefers cards the other person wants, keeps their side within 5% of fair, and stays within the extra you said you are OK giving). Every field in an incoming link is checked, and pictures load only from the three card databases, so a link can't inject code or track whoever opens it. Deals finish in person, so the app never holds money, addresses or messages.</li>
+    <li><b>Trade Links instead of accounts and chat:</b> the cards you list are compressed into the part of a share link after <code>#</code>, which browsers never send to any server. A friend opens it and the app matches their wishlist and suggests a fair trade (a small subset search that prefers cards the other person wants, keeps their side within 5% of fair, and stays within the extra you said you are OK giving). Every field in an incoming link is checked, and pictures load only from the three card databases, so a link can't inject code or track whoever opens it. Deals finish in person, so the app never holds money, addresses or messages. For card shop trade nights the link also shows as a QR code drawn on the device. Every QR size was read back with a separate decoder; one size (version 23, low error correction) failed with that reader even though it matches the standard, so the app skips it and uses the next size up.</li>
+    <li><b>Set progress from three different sources:</b> Pokémon sets report their printed size, Lorcana marks chase cards by rarity, and One Piece marks them as parallel prints, so each is mapped to the same "142 of 191, plus chase cards" model. Lorcana cards saved before this feature had no set code, so the app looks those up once, pausing between calls as the Lorcast API asks.</li>
     <li><b>Plain language:</b> verdicts like "📉 You'd lose value. Ask them to add about $61.76" instead of raw percentages.</li>
     <li><b>Honest numbers:</b> sample cards use real live prices, and the value chart never invents history. It grows one point per day.</li>
     <li><b>Make it yours:</b> 9 themes and custom colors, dark mode chosen with its own colors (not just inverted), color-coding by game, rarity, condition or tag, and three layouts.</li>
     <li><b>Accessibility:</b> labelled controls, dialogs that close with Escape and return focus, live regions, a data table behind every chart, and support for reduced motion and forced colors.</li>
+  </ul>
+
+  <h2>Five games, one card model</h2>
+  <p>Each source has its own rules, and the app follows them: Scryfall (Magic) allows free apps to show its data but forbids fading or recoloring card images, so missing Magic cards in set progress get an outline instead of greying out, and prices come 75 cards per request. YGOPRODeck (Yu-Gi-Oh!) asks apps not to hotlink its pictures and to keep data locally, so Yu-Gi-Oh! cards show your own photo and card data is cached on the device. Yu-Gi-Oh! needed two more fixes: the database can give one card several ids (one per artwork), so a printing is identified by what's printed on it (set code and rarity); and regions number sets differently (LOB-E021 isn't LOB-021), so set progress groups by card, not by number.</p>
+
+  <h2>Planning for failure</h2>
+  <ul>
+    <li><b>Card databases down:</b> every lookup retries with growing waits, respects "slow down" (429) answers, and times out; prices keep their last known values and the app says what happened.</li>
+    <li><b>Phone storage full:</b> saves fail with a plain message, and the app never shows a change it couldn't save.</li>
+    <li><b>Data loss:</b> Safari can erase a website's storage if it isn't opened for about a week, so iPhone users get an Add to Home Screen tip, and everyone gets a backup reminder after a month.</li>
+    <li><b>Big binders:</b> 1,500 cards draw in about 0.16 s and search in about 0.1 s; each price update asks for each card once, and Magic prices come 75 cards per request.</li>
+    <li><b>Links from the future:</b> a trade link made by a newer version asks you to update instead of calling itself broken.</li>
   </ul>
 
   <h2>Quality</h2>
@@ -147,8 +160,7 @@
 
   <h2>What's next</h2>
   <ul>
-    <li>More games (Magic, Yu-Gi-Oh!, Star Wars Unlimited) through the same card-model adapter.</li>
-    <li>Set-completion progress ("I have 142 of 191 in Surging Sparks").</li>
+    <li>Star Wars: Unlimited. Its free database doesn't send CORS headers, so a browser-only app can't call it; it would need a small proxy.</li>
     <li>Better scanning with a small on-device image-matching model for full-art cards.</li>
     <li>Optional, private sync between your own devices.</li>
   </ul>

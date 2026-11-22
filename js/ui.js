@@ -3,7 +3,7 @@ import { GAMES, rarLevel } from "./logic.js";
 import { S, photoURL } from "./store.js";
 import { $, esc, mix, lum } from "./util.js";
 
-export const VERSION = "2.1.1";
+export const VERSION = "2.5.0";
 
 // tiny event bus: screens tell each other when data changes
 const subs = {};
@@ -17,7 +17,7 @@ export const signed = n => (n >= 0 ? "+" : "−") + money(Math.abs(n));
 export const gameColor = g => S.gameColors[g] || (GAMES[g] && GAMES[g].color) || "#999";
 const COND_COL = {"Near Mint": "#1a8a4a", "Lightly Played": "#3d8fe0", "Moderately Played": "#c99400", "Heavily Played": "#e06a14", "Damaged": "#d23a33", "Graded": "#8b5cf6"};
 export const condColor = c => S.condColors[c] || COND_COL[c] || "#999";
-export const condLabel = c => c.cond === "Graded" && c.grade ? c.grade : (c.cond || "Near Mint");
+export const condLabel = c => c.kind === "sealed" ? "📦 " + (c.product || "Sealed") : c.cond === "Graded" && c.grade ? c.grade : (c.cond || "Near Mint");
 const RAR_PAL = ["#9aa0b8", "#59b36b", "#3d8fe0", "#8b5cf6", "#e0559b", "#f0a020", "#e6b800"];
 export function stripe(c) {
   if (S.colorBy === "game") return gameColor(c.game);

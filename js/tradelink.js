@@ -6,13 +6,14 @@ import { GAMES, matchesAny, suggestTrade } from "./logic.js";
 import { S, saveS, cards, wants, db, loadLocal, saveLocal } from "./store.js";
 import { $, esc, toast, openSheet, closeSheet, copyText } from "./util.js";
 import { money, moneyOr, cardImg, fillPhotos, condLabel, on, emit } from "./ui.js";
-import { refreshPrices } from "./catalog.js";
+import { refreshPrices, card as fetchCard } from "./catalog.js";
+import qrcode from "./vendor/qrcode.js";
 import { setTrade } from "./trade.js";
 
 const MAX_CARDS = 150, MAX_WANTS = 60;
-const SRCS = ["tcgdex", "lorcast", "optcg"];
+const SRCS = ["tcgdex", "lorcast", "optcg", "scryfall", "ygo"];
 // Only pictures from the card databases are shown, so a link can't load pictures from anywhere else.
-const IMG_OK = /^https:\/\/(assets\.tcgdex\.net|cards\.lorcast\.io|optcgapi\.com|www\.optcgapi\.com)\//;
+const IMG_OK = /^https:\/\/(assets\.tcgdex\.net|cards\.lorcast\.io|optcgapi\.com|www\.optcgapi\.com|cards\.scryfall\.io)\//;
 const LABEL = {t: "🔁 For trade", s: "💲 For sale", ts: "🔁💲 Trade or sell"};
 
 // ------------------------------------------------------------------ pack and unpack a link
@@ -38,6 +39,7 @@ const ref = (src, id, v) => SRCS.includes(src) && str(id) ? {src, id: str(id), v
 const img = u => IMG_OK.test(str(u, 300)) ? u : "";
 /** A link is written by someone else, so check every field and keep only what we expect. */
 function clean(o) {
+  if (o && +o.v > 1) throw new Error("newer");   // made by a newer Binder Buddy than this one
   if (!o || o.v !== 1 || !Array.isArray(o.c)) throw new Error("bad link");
   return {
     name: str(o.n, 24).replace(/[<>]/g, "").trim() || "A collector", pct: Math.min(150, Math.max(10, +o.p || 80)), date: str(o.d, 10),
@@ -51,12 +53,13 @@ function clean(o) {
 
 // ------------------------------------------------------------------ my side
 export const listed = () => [...cards.values()].filter(c => c.tl && (+c.qty || 0) > 0);
-export async function myLink() {
+export async function myLink(lite = false) {
+  // lite: no picture addresses, for QR codes (the pictures fill in when the friend opens it)
   const mine = listed().sort((a, b) => (+b.market || 0) - (+a.market || 0)).slice(0, MAX_CARDS);
   const obj = {v: 1, n: str(S.tlName, 24), p: +S.tlPct || 80, d: new Date().toISOString().slice(0, 10),
     c: mine.map(c => [c.game, c.ref?.src || "", c.ref?.id || "", c.ref?.v || "", c.name, c.set || "", c.num || "", c.rarity || "", c.cond || "", c.grade || "",
-      +c.qty || 1, c.market === "" || c.market == null ? null : +c.market, c.tl, c.img || ""]),
-    w: +S.tlWants ? [...wants.values()].slice(0, MAX_WANTS).map(w => [w.game, w.ref?.src || "", w.ref?.id || "", w.name, w.set || "", w.num || "", w.img || ""]) : []};
+      +c.qty || 1, c.market === "" || c.market == null ? null : +c.market, c.tl, lite ? "" : c.img || ""]),
+    w: +S.tlWants ? [...wants.values()].slice(0, MAX_WANTS).map(w => [w.game, w.ref?.src || "", w.ref?.id || "", w.name, w.set || "", w.num || "", lite ? "" : w.img || ""]) : []};
   return location.origin + location.pathname + "#t=" + await pack(obj);
 }
 
@@ -107,6 +110,33 @@ $("tl-wants").onchange = () => { S.tlWants = +$("tl-wants").value; saveS(); };
 $("tl-pick").onclick = openList;
 $("tl-done").onclick = () => { closeSheet("m-tlist"); drawPanel(); };
 
+
+// ------------------------------------------------------------------ QR code (for trading in person)
+const QR_EASY = 1300, QR_MAX = 2900;   // characters: up to ~1300 scans easily off a phone screen; ~2900 is the most a QR code holds
+export function drawQR(canvas, text) {
+  let q = qrcode(0, "L"); q.addData(text, "Byte"); q.make();
+  // Size 23 matches the QR standard, but a common QR reader can't read it in testing. Use size 24 instead to be safe.
+  if (q.getModuleCount() === 17 + 4 * 23) { q = qrcode(24, "L"); q.addData(text, "Byte"); q.make(); }
+  const n = q.getModuleCount(), quiet = 4, px = Math.max(3, Math.floor(840 / (n + quiet * 2)));
+  canvas.width = canvas.height = (n + quiet * 2) * px;
+  const g = canvas.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, canvas.width, canvas.height);
+  g.fillStyle = "#000";
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) g.fillRect((c + quiet) * px, (r + quiet) * px, px, px);
+  return n;
+}
+async function showQR() {
+  let url = $("ts-link").value;
+  if (url.length > QR_EASY) url = await myLink(true);
+  const box = $("ts-qr");
+  box.hidden = false;
+  if (url.length > QR_MAX) { box.innerHTML = `<p class="note">Too many cards for one QR code. Share the link instead, or list fewer cards.</p>`; return; }
+  box.innerHTML = `<canvas id="ts-qrc" role="img" aria-label="QR code for my trade binder"></canvas>
+    <p class="note">Turn your screen brightness up. Your friend points their phone camera at this and taps the link.${url.length > QR_EASY ? " It's a big list, so hold the phones steady and close." : ""}</p>`;
+  try { drawQR($("ts-qrc"), url); } catch (e) { box.innerHTML = `<p class="note">Couldn't make a QR code for this list. Share the link instead.</p>`; }
+  box.scrollIntoView({block: "nearest"});
+}
+
 async function openShare() {
   if (!listed().length) return openList();
   const url = await myLink();
@@ -115,25 +145,41 @@ async function openShare() {
   $("ts-info").textContent = `${l.length} card${l.length === 1 ? "" : "s"}${+S.tlWants && wants.size ? " and your wishlist" : ""}, priced ${new Date().toLocaleDateString()}. The link is a snapshot: share a new one after you change your list.`;
   $("ts-long").hidden = url.length <= 1900;
   $("ts-send").hidden = !navigator.share;
+  $("ts-qr").hidden = true; $("ts-qr").innerHTML = "";
   openSheet("m-tshare", "#ts-copy");
 }
 $("tl-share").onclick = openShare;
+$("ts-showqr").onclick = showQR;
 $("ts-copy").onclick = () => copyText($("ts-link").value, "Link copied! Paste it where you trade.");
 $("ts-send").onclick = () => navigator.share({title: (S.tlName || "My") + " trade binder", text: "My trade binder on Binder Buddy", url: $("ts-link").value}).catch(() => {});
 
 // ------------------------------------------------------------------ their side
 let F = null, pickedGet = new Set(), lastHash = "";
 export async function openFriend(hash) {
-  try { F = await unpack(hash); } catch (e) { toast("That trade link is broken or cut off. Ask them to send it again."); return false; }
+  try { F = await unpack(hash); }
+  catch (e) { toast(e.message === "newer" ? "This link was made with a newer Binder Buddy. Reload the page to update, then open it again." : "That trade link is broken or cut off. Ask them to send it again.", 7000); return false; }
   lastHash = hash;
   const myWants = [...wants.values()];
   pickedGet = new Set(F.cards.filter(c => c.tl.includes("t") && matchesAny(c, myWants)).map(c => c.id));
   drawFriend();
   openSheet("m-friend", "#fr-title");
+  fillPictures(F);
   return true;
 }
+// Links from a QR code leave out picture addresses to stay small. Look them up from the card databases.
+async function fillPictures(f) {
+  const need = [...f.cards, ...f.wants].filter(c => !c.img && c.ref);
+  if (!need.length) return;
+  const one = async c => { try { const d = await fetchCard(c.ref.src, c.ref.id); if (d && d.img) c.img = d.img; } catch (e) {} };
+  const lor = need.filter(c => c.ref.src === "lorcast"), q = need.filter(c => c.ref.src !== "lorcast");
+  await Promise.all([
+    ...[0, 1, 2, 3].map(async () => { while (q.length) await one(q.shift()); }),
+    (async () => { for (const c of lor) { await one(c); await new Promise(r => setTimeout(r, 120)); } })(),   // Lorcast asks for a pause between calls
+  ]);
+  if (F === f && $("m-friend").classList.contains("open")) drawFriend();
+}
 function friendRow(c, kind) {
-  const sale = kind === "card" && c.tl.includes("s") && c.market !== "" ?Math.round(c.market * F.pct) / 100 : null;
+  const sale = kind === "card" && c.tl.includes("s") && c.market !== "" ? Math.round(c.market * F.pct) / 100 : null;
   const onWish = kind === "card" && matchesAny(c, [...wants.values()]);
   const iHave = kind === "want" && [...cards.values()].find(m => (+m.qty || 0) > 0 && matchesAny(m, [c]));
   return `<div class="card${c.img ? " withpic" : ""}${kind === "card" && pickedGet.has(c.id) ? " picked" : ""}">${cardImg(c)}

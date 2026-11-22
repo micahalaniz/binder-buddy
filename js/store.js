@@ -1,6 +1,6 @@
 // Everything is saved on this device: IndexedDB for cards, photos, wishlist and cached card data,
 // localStorage for small settings. Nothing is sent anywhere.
-import { today } from "./util.js";
+import { today, toast } from "./util.js";
 
 // ------------------------------------------------------------------ settings
 export const THEMES = {
@@ -49,15 +49,32 @@ export function openDB() {
       for (const [name, opt] of [["cards", {keyPath: "id"}], ["photos"], ["wants", {keyPath: "id"}], ["cache"]])
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, opt);
     };
-    r.onsuccess = () => { DB = r.result; res(DB); };
+    r.onsuccess = () => {
+      DB = r.result;
+      // a newer Binder Buddy opened in another tab needs to upgrade the database: step aside and say so
+      DB.onversionchange = () => { DB.close(); toast("Binder Buddy updated in another tab. Reload this page to keep going.", 9000); };
+      res(DB);
+    };
+    r.onblocked = () => toast("Close other Binder Buddy tabs so it can update.", 9000);
     r.onerror = () => rej(r.error);
   });
 }
+let fullWarned = 0;
+function saveFailed(e) {
+  // phone storage full: say so clearly (once a minute) instead of failing quietly
+  if (e && e.name === "QuotaExceededError" && Date.now() - fullWarned > 60e3) {
+    fullWarned = Date.now();
+    toast("⚠️ Your phone's storage is full, so this didn't save. Make a backup (More tab), then delete some photos or free up space.", 9000);
+  }
+  return e || new Error("Couldn't save");
+}
 function tx(store, mode, fn) {
   return new Promise((res, rej) => {
-    const t = DB.transaction(store, mode), out = fn(t.objectStore(store));
+    let t, out;
+    try { t = DB.transaction(store, mode); out = fn(t.objectStore(store)); }   // can throw if another tab is updating the database
+    catch (e) { rej(saveFailed(e)); return; }
     t.oncomplete = () => res(out && out.result !== undefined ? out.result : undefined);
-    t.onerror = () => rej(t.error);
+    t.onerror = t.onabort = () => rej(saveFailed(t.error));
   });
 }
 export const db = {

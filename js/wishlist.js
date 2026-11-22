@@ -81,3 +81,12 @@ $("wishOut").addEventListener("click", e => {
 });
 on("want:add", t => { emit("tab", "wish"); addWant(t); });
 on("data", renderWishes);
+
+/** Add a card straight to the wishlist (from set progress). r: a card-database card. */
+export async function quickWant(r) {
+  const have = [...wants.values()].find(w => w.ref && w.ref.id === r.id);
+  if (have) { toast("Already on your wishlist"); return false; }
+  const w = {id: newId("w"), game: r.game, name: r.name, set: r.set, num: r.num, rarity: r.rarity, max: "", note: "", added: new Date().toISOString(), ...linkFields(r)};
+  logPrice(w); await saveWant(w); emit("data");
+  return true;
+}
