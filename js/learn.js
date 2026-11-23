@@ -17,6 +17,7 @@ export function codeKeys(p) {
   if (p.ygoCode) k.push("ygo:" + p.ygoCode);
   if (p.lorSet && p.lorNum) k.push("lor:" + p.lorSet + "/" + p.lorNum);
   if (p.num && p.total) k.push("pk:" + normNum(p.num) + "/" + normNum(p.total));
+  if (p.pkCode) k.push("pkc:" + p.pkCode.pre + normNum(p.pkCode.n));
   return k;
 }
 /** A weak key comes from the name text. It only says "this card might be one of these". */

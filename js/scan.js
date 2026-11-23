@@ -2,8 +2,8 @@
 // code on each card (like 238/191, OP01-120 or 207/204 • EN • 1) plus the name, then we look the
 // card up in the free card databases. Photos never leave the phone; only the OCR program itself is
 // downloaded (once) from the jsDelivr CDN the first time you scan.
-import { parseCardText, normNum, nameMatch } from "./logic.js";
-import { search, card, onePieceByCode, lorcanaBySetNum, pokemonSetsByTotal, pokemonSetCards, ygoByCode } from "./catalog.js";
+import { parseCardText, normNum, numKey, nameMatch } from "./logic.js";
+import { search, card, onePieceByCode, lorcanaBySetNum, pokemonSetsFor, pokemonSetCards, ygoByCode } from "./catalog.js";
 import { loadImg } from "./util.js";
 import { recall } from "./learn.js";
 
@@ -57,32 +57,33 @@ export async function identify(text, gameHint = "auto") {
   if (!out.length && p.ygoCode && allow("ygo")) { try { add(await ygoByCode(p.ygoCode)); } catch (e) {} }
   if (!out.length && p.lorSet && allow("lorcana")) { try { add([await lorcanaBySetNum(p.lorSet, p.lorNum)]); } catch (e) {} }
   let pkChecked = false, pkExact = false;
-  if (!out.length && p.num && p.total && allow("pokemon")) {
-    // "025/165": the number alone isn't enough (lots of sets have 12 or 165 cards, and the scanner can drop a
-    // digit), so the name it read has to agree.
+  if (!out.length && ((p.num && p.total) || p.pkCode) && allow("pokemon")) {
+    // "025/165", "TG05/TG30", "RC5/RC32", "SWSH050": the number alone isn't enough (lots of sets have 12 or 165
+    // cards, and the scanner can drop a digit), so the name it read has to agree.
     pkChecked = true;
     try {
-      const sets = await pokemonSetsByTotal(p.total), q = normNum(p.num);
-      const nums = [...new Set([p.num, q])];
-      const atNum = (await Promise.all(sets.slice(0, 12).flatMap(s => nums.map(n => card("tcgdex", s.id + "-" + n).catch(() => null))))).filter(Boolean);
-      // 1. card 025 in a set of 165 AND the name agrees: found it
-      const agree = atNum.filter(c => nameMatch(c.name, p.words));
-      if (agree.length) { add(agree); pkExact = agree.length === 1; }
+      const {sets, key: q} = await pokemonSetsFor(p);
+      const lists = await Promise.all(sets.slice(0, 25).map(s => pokemonSetCards(s.id).catch(() => [])));
+      const all = lists.flat();
+      const get = list => Promise.all(list.slice(0, 6).map(c => card("tcgdex", c.id).catch(() => null))).then(l => l.filter(Boolean));
+      const atNumL = all.filter(c => numKey(c.localId) === q);
+      // 1. that number in a matching set AND the name agrees: found it
+      const agree = atNumL.filter(c => nameMatch(c.name, p.words));
+      if (agree.length) { add(await get(agree)); pkExact = agree.length === 1; }
       else {
-        // 2. read through every set of 165 for the name (handles a lost digit like 11 → 1, and typos like "Pid0ve")
-        const lists = await Promise.all(sets.slice(0, 25).map(s => pokemonSetCards(s.id).catch(() => [])));
-        const near = c => { const n = normNum(c.localId); return n.includes(q) || q.includes(n); };
-        const named = lists.flat().filter(c => nameMatch(c.name, p.words));
+        // 2. the name somewhere in those sets at a close number (a lost digit like 11 → 1, typos like "Pid0ve")
+        const near = c => { const n = numKey(c.localId); return n.includes(q) || q.includes(n); };
+        const named = all.filter(c => nameMatch(c.name, p.words));
         const close = named.filter(near), far = named.filter(c => !near(c)).slice(0, 4);
-        const get = list => Promise.all(list.slice(0, 6).map(c => card("tcgdex", c.id).catch(() => null))).then(l => l.filter(Boolean));
         if (close.length) add(await get(close));
         else {
           // 3. the name couldn't be read (fancy fonts) or the read is messy: offer both, you confirm.
           //    A number read the same way twice is trusted more than a stray word.
-          const twice = (text.match(new RegExp(`\\b${p.num}\\s*/\\s*${p.total}\\b`, "gi")) || []).length >= 2;
-          const byName = await get(far);
+          const shown = p.pkCode ? `${p.pkCode.pre}\\s?(?:EN\\s?)?${p.pkCode.n}` : `${p.num}\\s*/\\s*${p.total}`;
+          const twice = (text.match(new RegExp(`\\b${shown}\\b`, "gi")) || []).length >= 2;
+          const atNum = await get(atNumL), byName = await get(far);
           if (twice) { add(atNum); add(byName); } else { add(byName); add(atNum); }
-          pkExact = twice && sets.length === 1 && atNum.length === 1 && !byName.length;
+          pkExact = twice && atNum.length === 1 && !byName.length && (sets.length === 1 || !!p.pkCode);
         }
       }
     } catch (e) {}

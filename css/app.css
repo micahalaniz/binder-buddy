@@ -288,3 +288,12 @@ footer { text-align: center; font-size: 12px; color: var(--soft); font-weight: 7
 .care { background: var(--surface); border: 3px solid var(--warn); border-radius: 16px; padding: 10px 14px; margin: 0 0 12px; }
 .care p { margin: 0; font-weight: 700; font-size: 14px; }
 .scard.miss.keep img { filter: none; opacity: 1; outline: 3px dashed var(--line); outline-offset: -3px; }   /* Magic: Scryfall asks that card images are not faded or recolored */
+
+/* card info */
+.info{margin:14px 0;border:1px solid var(--line,#333);border-radius:12px;padding:8px 12px}
+.info summary{cursor:pointer;font-weight:800;padding:4px 0}
+.info .kv{margin-top:8px}
+.itext{margin:10px 0 0}
+.itext b{display:block}
+.itext p{margin:2px 0 0;white-space:pre-wrap;line-height:1.4}
+

@@ -6,7 +6,7 @@
 //   Yu-Gi-Oh!:      YGOPRODeck  https://ygoprodeck.com (prices per printing; no card pictures, as they ask)
 // Every result is turned into one shape:
 //   {game, src, id, name, set, num, rarity, img, imgLg, tcgId, variants: {key: usd}, v, market, trend}
-import { mapRarity, normNum, GAMES } from "./logic.js";
+import { mapRarity, normNum, numKey, PK_CODES, pkCodeKey, GAMES } from "./logic.js";
 import { cacheGet, cacheSet } from "./store.js";
 import { sleep } from "./util.js";
 
@@ -54,12 +54,25 @@ async function pokemonSets() {
   return pkSets;
 }
 const pkSetOf = id => id.slice(0, id.lastIndexOf("-"));
+/** "025/165". Lettered numbers (TG05, SWSH050, RC5) are shown as printed, without a total. */
+const PK_PROMO_SETS = new Set(["svp", "mep", "swshp", "smp", "xyp", "bwp", "dpp", "hgssp", "np", "basep", "wp", "miscp"]);
+const pkNum = (localId, official, setId) => /^[A-Z]/i.test(String(localId)) || !official || PK_PROMO_SETS.has(setId) ? String(localId) : localId + "/" + String(official).padStart(String(localId).length, "0");
 /** Pokémon sets whose printed card count matches, newest first (for "025/165" style codes). */
 /** Every card in a Pokémon set: [{id, localId, name}]. Kept for a day. */
 const pkSetCards = new Map();
 export async function pokemonSetCards(setId) {
   if (!pkSetCards.has(setId)) pkSetCards.set(setId, getJSON(`${TCGDEX}/sets/${encodeURIComponent(setId)}`).then(s => (s && s.cards) || []).catch(e => { pkSetCards.delete(setId); throw e; }));
   return pkSetCards.get(setId);
+}
+/** Which sets could a printed Pokémon number come from? "025/165" → sets of 165; "RC5/RC32" → Generations,
+ *  Legendary Treasures; "SWSH050" → SWSH promos. Returns {sets, key} where key is the card number to look for. */
+export async function pokemonSetsFor(p) {
+  const sets = await pokemonSets();
+  const pick = ids => ids.map(id => sets.get(id)).filter(Boolean);
+  if (p.pkCode && PK_CODES[p.pkCode.pre]) return {sets: pick(PK_CODES[p.pkCode.pre].sets), key: pkCodeKey(p.pkCode)};
+  const pre = (String(p.total || "").toUpperCase().match(/^[A-Z]+/) || [""])[0];
+  if (pre && PK_CODES[pre]) return {sets: pick(PK_CODES[pre].sets), key: numKey(p.num)};
+  return {sets: await pokemonSetsByTotal(p.total), key: numKey(p.num)};
 }
 export async function pokemonSetsByTotal(total) {
   const sets = await pokemonSets(), t = +String(total).replace(/\D/g, "");
@@ -79,7 +92,7 @@ function pkByName(name) {
 function pkShape(c, s) {
   const official = s && s.official;
   return {game: "pokemon", src: "tcgdex", id: c.id, name: c.name, set: s ? s.name : pkSetOf(c.id), order: s ? s.order : 1e6,
-    num: c.localId + (official ? "/" + String(official).padStart(String(c.localId).length, "0") : ""),
+    num: pkNum(c.localId, official, c.id.slice(0, c.id.lastIndexOf("-"))),
     img: c.image ? c.image + "/low.webp" : "", imgLg: c.image ? c.image + "/high.webp" : "", partial: true};
 }
 /**
@@ -88,10 +101,12 @@ function pkShape(c, s) {
  */
 async function searchPokemon(text) {
   let sets = await pokemonSets();
-  const code = text.match(/^#?([a-z]{0,3}\d{1,3})\s*\/\s*([a-z]{0,3}\d{2,3})$/i);
-  if (code) {
-    const ss = await pokemonSetsByTotal(code[2]);
-    const found = await Promise.all(ss.slice(0, 20).map(s => pokemonSetCards(s.id).then(l => l.filter(c => normNum(c.localId) === normNum(code[1])).map(c => pkShape(c, s))).catch(() => [])));
+  // just the number printed on the card: "025/165", "RC5/RC32", "TG05/TG30", "SWSH050", "SVP 045"
+  const code = text.match(/^#?([a-z]{0,3}\d{1,3})\s*\/\s*([a-z]{0,3}\d{1,3})$/i);
+  const promo = !code && text.toUpperCase().match(/^(SWSH|HGSS|SVP|MEP|SM|XY|BW|DP|SH|AR|RT|SL|RC|TG|GG|SV|CC)\s?(?:EN\s?)?[-–]?\s?(\d{1,3})$/);
+  if (code || promo) {
+    const {sets: ss, key} = await pokemonSetsFor(code ? {num: code[1], total: code[2]} : {pkCode: {pre: promo[1], n: promo[2]}});
+    const found = await Promise.all(ss.slice(0, 20).map(s => pokemonSetCards(s.id).then(l => l.filter(c => numKey(c.localId) === key).map(c => pkShape(c, s))).catch(() => [])));
     return found.flat();
   }
   const tokens = text.split(/\s+/).filter(Boolean);
@@ -110,13 +125,13 @@ async function searchPokemon(text) {
     // every extra word must match the card number ("25", "025/165") or the set ("151", "Prismatic")
     const ok = (r, t) => {
       const [n, tot] = t.replace(/^#/, "").split("/"), [rn, rt] = String(r.num).split("/");
-      if (/\d/.test(n) && normNum(n) === normNum(rn) && (!tot || normNum(tot) === normNum(rt))) return true;
+      if (/\d/.test(n) && numKey(n) === numKey(rn) && (!tot || numKey(tot) === numKey(rt))) return true;
       const st = (r.set + " " + pkSetOf(r.id)).toLowerCase();
       return st.includes(t.toLowerCase());
     };
     const hits = all.filter(r => rest.every(t => ok(r, t)));
     if (hits.length) {
-      const exactNum = r => rest.some(t => normNum(t.split("/")[0]) === normNum(String(r.num).split("/")[0])) ? 0 : 1;
+      const exactNum = r => rest.some(t => numKey(t.split("/")[0]) === numKey(String(r.num).split("/")[0])) ? 0 : 1;
       return sortPk(hits).sort((a, b) => exactNum(a) - exactNum(b));
     }
   }
@@ -141,7 +156,7 @@ async function pokemonCard(id) {
   const official = s.cardCount && s.cardCount.official;
   const v = pickVariant(variants);
   return {game: "pokemon", src: "tcgdex", id: c.id, name: c.name, set: s.name || "", rarity: mapRarity("pokemon", c.rarity),
-    num: c.localId + (official ? "/" + String(official).padStart(String(c.localId).length, "0") : ""),
+    num: pkNum(c.localId, official, c.id.slice(0, c.id.lastIndexOf("-"))),
     img: c.image ? c.image + "/low.webp" : "", imgLg: c.image ? c.image + "/high.webp" : "", tcgId, variants, v, market: v ? variants[v] : null, trend};
 }
 function pickVariant(variants, want) {
@@ -285,7 +300,8 @@ function ygoCardRaw(cid) {
     const hit = await cacheGet("ygo:" + cid, 20 * HOUR); if (hit) return hit;
     const d = await ygo(`${YGO}/cardinfo.php?id=${encodeURIComponent(cid)}`);
     const c = d && d.data && d.data[0];
-    if (c) cacheSet("ygo:" + cid, {id: c.id, name: c.name, card_sets: c.card_sets || []});
+    if (c) cacheSet("ygo:" + cid, {id: c.id, name: c.name, card_sets: c.card_sets || [], info: 1, type: c.type, humanReadableCardType: c.humanReadableCardType, frameType: c.frameType,
+      desc: c.desc, race: c.race, atk: c.atk, def: c.def, level: c.level, attribute: c.attribute, archetype: c.archetype, linkval: c.linkval, scale: c.scale, typeline: c.typeline});
     return c || null;
   })().catch(e => { ygoMem.delete(cid); throw e; }));
   return ygoMem.get(cid);
@@ -310,6 +326,32 @@ async function ygoCard(id) {
   const c = await ygoCardRaw(cid); if (!c) return null;
   const p = (c.card_sets || []).find(x => x.set_code === code && (x.set_rarity_code || x.set_rarity) === rar) || (c.card_sets || []).find(x => x.set_code === code);
   return p ? ygoShape(c, p) : null;
+}
+
+/** Everything the card database knows about one card, for the "Card info" section. Not saved in the binder. */
+const rawMem = new Map();
+export function rawCard(src, id) {
+  const k = src + ":" + id;
+  if (!rawMem.has(k)) rawMem.set(k, (async () => {
+    if (src === "tcgdex") return getJSON(`${TCGDEX}/cards/${encodeURIComponent(id)}`);
+    if (src === "lorcast") return getJSON(`${LORCAST}/cards/${encodeURIComponent(id)}`);
+    if (src === "scryfall") return scry(`${SCRY}/cards/${encodeURIComponent(id)}`);
+    if (src === "ygo") {
+      const cid = await ygoCidByCode(id.split("~")[0]); if (!cid) return null;
+      let c = await ygoCardRaw(cid);
+      if (c && !c.info && c.desc == null) { ygoMem.delete(cid); await cacheSet("ygo:" + cid, null); c = await ygoCardRaw(cid); }   // saved before card text was kept
+      return c;
+    }
+    if (src === "optcg") {
+      const hit = (await onePieceAll()).find(x => x.i === id), code = hit ? hit.s : id.replace(/_.*/, "");
+      for (const kind of ["sets", "decks", "promos"]) {
+        try { const rows = await getJSON(`${OPTCG}/${kind}/card/${encodeURIComponent(code)}/`, 1); const r = (rows || []).find(x => x.card_image_id === id) || (rows || [])[0]; if (r) return r; } catch (e) {}
+      }
+      return null;
+    }
+    return null;
+  })().catch(e => { rawMem.delete(k); throw e; }));
+  return rawMem.get(k);
 }
 
 export async function search(game, text) {

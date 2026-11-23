@@ -6,6 +6,7 @@
 // Zero-dependency test runner for the pure logic in js/logic.js. Open this page in any browser.
 import * as L from "../js/logic.js";
 import * as LR from "../js/learn.js";
+import * as CI from "../js/cardinfo.js";
 const results = [];
 const test = (name, fn) => { try { fn(); results.push({name, ok: true}); } catch (e) { results.push({name, ok: false, err: e.message}); } };
 const eq = (a, b, msg = "") => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${msg} expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); };
@@ -88,7 +89,32 @@ test("bulk add lines", () => {
   eq(L.parseBulkLine("digimon, Agumon"), null);   // not supported yet
   eq(L.parseBulkLine("pokemon"), null);
 });
-test("scanner text: card codes for each game", () => {
+test("Pokémon special sets, promos and secret rares", () => {
+  eq(L.numKey("TG05"), "TG5"); eq(L.numKey("025"), "25"); eq(L.numKey("SWSH001"), "SWSH1");
+  eq(L.parseCardText("Pikachu VMAX TG17/TG30").total, "TG30");
+  eq(L.parseCardText("Gardevoir RC30/RC32").num, "RC30");
+  eq(L.parseCardText("Arceus AR4/AR9").total, "AR9");
+  eq(L.parseCardText("date 1/2 here").num, undefined);
+  eq(JSON.stringify(L.parseCardText("Pikachu PROMO SWSH020").pkCode), '{"pre":"SWSH","n":"020"}');
+  eq(L.pkCodeKey(L.parseCardText("Pikachu SVP EN 085").pkCode), "85");
+  eq(L.PK_CODES.RC.sets.includes("g1"), true);
+  eq(L.pkSpecial("199", 165), "Secret rare (numbered past the set's 165 cards)");
+  eq(L.pkSpecial("100", 165), "");
+  eq(L.pkSpecial("GG70", 70), "Galarian Gallery");
+  eq(L.nameMatch("Mimikyu VMAX", ["Pikachu VMAX"]), false);
+});
+test("card info rows", () => {
+  const d = CI.describe("tcgdex", {localId: "199", set: {name: "151", cardCount: {official: 165, total: 207}}, hp: 330, types: ["Fire"], stage: "Stage2", evolveFrom: "Charmeleon",
+    attacks: [{name: "Explosive Vortex", cost: ["Fire", "Fire", "Fire", "Fire"], damage: 330, effect: "Discard 3 Energy."}], legal: {standard: false, expanded: true}, illustrator: "miki kudo",
+    variants: {holo: true}});
+  const f = Object.fromEntries(d.facts);
+  eq(f["Special set"], "Secret rare (numbered past the set's 165 cards)");
+  eq(f["Stage"], "Stage 2 (evolves from Charmeleon)");
+  eq(f["Tournament legal"], "Standard: No · Expanded: Yes");
+  eq(d.texts[0][1], "Cost: Fire ×4. Discard 3 Energy.");
+  eq(CI.describe("ygo", {humanReadableCardType: "Normal Monster", level: 8, atk: 3000, def: 2500}).facts.find(x => x[0] === "ATK / DEF")[1], "3000 / 2500");
+  eq(CI.infoHTML(CI.describe("optcg", {card_text: "<b>x</b>"})).includes("<b>x</b>"), false);   // card text can't inject HTML
+});test("scanner text: card codes for each game", () => {
   eq(L.parseCardText("NO. 0025 ... Mews 025/165 ® energy").num, "025");
   // the scanner must agree with the name, forgiving small misreads
   eq(L.nameMatch("Pidove", ["Pidovc", "Growl"]), true);

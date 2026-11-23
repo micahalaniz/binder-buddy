@@ -6,6 +6,7 @@ import { $, esc, newId, toast, seg, openSheet, closeSheet, loadImg, toJpeg } fro
 import { money, moneyOr, signed, gameColor, condColor, condLabel, stripe, tagsHTML, cardImg, fillPhotos, daysOld, move, emit, on } from "./ui.js";
 import { lineChart } from "./chart.js";
 import { openPicker } from "./picker.js";
+import { wireInfo } from "./cardinfo.js";
 
 export const filt = {game: "all", tag: "", hits: false};
 // save to memory and to the device; if the device save fails (storage full), undo the memory change so nothing looks saved that isn't
@@ -198,6 +199,7 @@ export async function openDetail(id) {
       </div>
     </div>
     ${c.cond !== "Graded" && +c.market >= 5 ? worthGrading(c) : ""}
+    ${c.ref && c.ref.src ? `<details class="info" id="d-info"><summary>📖 Card info <span class="muted">(attacks, text, artist, legal, set details)</span></summary><div class="ibody"></div></details>` : ""}
     <h3>📈 Price history</h3>
     <div id="d-hist"><p class="note"><span class="spin"></span> Loading…</p></div>
     <h3>🔎 Check real sold prices</h3>
@@ -222,6 +224,7 @@ export async function openDetail(id) {
     $("wg-val").oninput = calc; $("wg-fee").oninput = calc; calc();
   }
   $("d-body").querySelectorAll("[data-zoom]").forEach(el => el.onclick = () => openLB(c.id, el.dataset.zoom === "official" ? pics.length : +el.dataset.zoom || 0));
+  wireInfo($("d-info"), c);
   openSheet("m-detail");
   drawHistory(c);
 }

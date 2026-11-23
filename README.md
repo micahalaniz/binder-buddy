@@ -23,7 +23,9 @@ Collection apps charge a monthly subscription for the features collectors need m
 
 | | |
 |---|---|
-| 📷 **Scanner** | Photograph one card or a whole 9- or 12-pocket binder page. On-device OCR reads the printed card code (`238/191`, `OP01-120`, `207/204 • EN • 1`) and matches it. You confirm every match. |
+| 📷 **Scanner** | Photograph one card or a whole 9- or 12-pocket binder page. On-device OCR reads the printed card code (`238/191`, `TG05/TG30`, `SWSH050`, `OP01-120`, `207/204 • EN • 1`, `LOB-EN001`) and checks it against the card name it read. When it isn't sure, you pick. |
+| 🔍 **Every card** | Search shows every match. Type a name, add a set ("Charizard 151") or a number ("Pikachu 25"), or type the number printed on the card ("025/165"). Covers secret rares (`199/165`), promos (`SWSH050`, `SM60`, `SVP 045`), Trainer Gallery, Galarian Gallery, Shiny Vault, Radiant Collection and other special subsets. |
+| 📖 **Card info** | HP, attacks, abilities, card text, artist, tournament legality, which versions were printed, and whether it's a secret rare or special subset. Works for all five games. |
 | 💵 **Live prices** | Linked cards update once a day from free community databases (TCGplayer market prices). |
 | 📈 **Price history** | A daily chart of your collection's value and of each card. One Piece shows 2 weeks of TCGplayer history, and Pokémon shows the Cardmarket 7- vs 30-day trend. Each card also has one-tap links to its exact TCGplayer page, eBay **sold** listings, PriceCharting and 130point. |
 | 🔎 **Do I have it?** | Type any name, set, number or rarity and get an instant yes or no. |
