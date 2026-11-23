@@ -37,6 +37,7 @@ export function openSheet(id, focusSel) {
   const m = $(id);
   if (m.classList.contains("open")) return;
   opened.push({id, back: document.activeElement});
+  m.style.zIndex = 10 + opened.length;   // newest sheet on top (search opened from the scanner was hiding behind it)
   m.classList.add("open");
   document.body.classList.add("locked");
   const f = focusSel ? m.querySelector(focusSel) : m.querySelector(".sheet");
@@ -45,7 +46,7 @@ export function openSheet(id, focusSel) {
 export function closeSheet(id) {
   const m = $(id);
   if (!m.classList.contains("open")) return;
-  m.classList.remove("open");
+  m.classList.remove("open"); m.style.zIndex = "";
   const i = opened.findIndex(o => o.id === id);
   const o = i >= 0 ? opened.splice(i, 1)[0] : null;
   if (!opened.length) document.body.classList.remove("locked");
