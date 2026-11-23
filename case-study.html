@@ -94,7 +94,7 @@
   <h2>Architecture</h2>
   <div class="diagram">
     <div>📱 Your phone<br><span style="font-weight:600">PWA · IndexedDB · Service worker</span></div><i>⇄</i>
-    <div>🧠 On-device<br><span style="font-weight:600">Tesseract.js OCR · SVG charts</span></div><i>⇄</i>
+    <div>🧠 On-device<br><span style="font-weight:600">OpenCV.js picture matching · Tesseract.js OCR · SVG charts</span></div><i>⇄</i>
     <div>🌐 Open card data<br><span style="font-weight:600">TCGdex · Lorcast · OPTCG API</span></div>
   </div>
   <p>There is no backend. The app is a static site on GitHub Pages. Three community databases, each with a different shape, are normalized into one card model, so every screen can treat Pokémon, One Piece, Lorcana and Magic the same:</p>
@@ -127,6 +127,15 @@
     <h3>Results on real card images (test page <code>tests/scan.html</code>)</h3>
     <p>Single cards: <b>4 of 5 matched exactly</b> (after adding a dedicated crop for the One Piece code corner and tolerance for common misreads like "0501" for "OP01"). The fifth (a full-art whose number sits beside gold stars) found the right Pokémon but the wrong print, so I added a look-alike check: the photo and each print's official picture are shrunk to a 12×16 color grid and compared, and the closest look goes first. Now <b>5 of 5</b> come out on top.</p>
     <p><b>It learns from mistakes.</b> When someone picks a different card than the first guess, the app remembers what it read and which card was right, on their device, so the same misread is fixed next time. Fixes from a printed code are trusted; fixes from the name alone are only hints, so one fix can't force every Mega Absol to the same print. A 🚩 Report button writes up what the scanner read and what was right (never the photo) as a GitHub issue. Checked fixes go into <code>js/fixes.js</code> with a test, so everyone gets them in the next update. A person reviews each one, so pranks can't teach it wrong answers. On a simulated 9-pocket page built from the same small images, <b>5 of 9 pockets matched</b> in about 26 seconds. Phone photos are much higher resolution, which helps. Because the system never auto-saves a guess, a wrong read costs one tap instead of a wrong collection.</p>
+    <h3>Version 2.7: picture matching plus text, checked against each other</h3>
+    <p>Real users' photos were blurrier than my test images, and reading text alone wasn't good enough: a binder page came back mostly wrong. So the scanner now does two independent checks on the phone:</p>
+    <ul>
+      <li><b>Find and straighten each card</b> with OpenCV.js: edge and brightness outlines, plus a "what isn't the table?" colour check for blurry photos. One rule mattered most: a box holding 3+ separate boxes is the binder page. My first version said 2+, but every card holds two boxes (its picture and its text), so each card was treated as a page and the scanner matched the picture boxes instead. Fixing that took binder pages from 47% to 94% right.</li>
+      <li><b>Compare colours</b> against a fingerprint list of every English Pokémon card that has a picture in TCGdex: 19,107 cards, 22 MB, downloaded once. A quick pass narrows the list, and a careful pass tries small shifts and zooms while ignoring glare.</li>
+      <li><b>Measure how sure it is</b> by how far the best match stands out from the best card with a <i>different name</i>. Old cards have identical reprints, and the printed number is what tells those apart.</li>
+      <li><b>Combine the checks:</b> the picture alone decides only when it's extremely sure. Wrong matches never scored above about 10, so the cut-off is 15. Otherwise the name or number read off the card must agree. If they disagree, or nothing is sure, you tap the right card.</li>
+    </ul>
+    <p><b>Results on simulated photos</b> (real card pictures, warped, blurred, with fake glare): clear single photos got the right Pokémon 99–100% of the time (the exact print 93–96%; the misses were identical reprints the number settles). Very blurry photos with heavy glare got 70–83%. In a full run of 132 cards (60 single photos and 8 binder pages) with both checks, the scanner <b>never confidently picked a wrong card</b>, and it found exactly 9 cards on every page. When it wasn't sure it asked. A second page fix helped here: an outline straddling two cards could invent a fake column, so columns closer than a card's width now count as one. Next step: test on real phone photos.</p>
   </div>
 
   <h2>Design decisions</h2>
@@ -154,7 +163,7 @@
 
   <h2>Quality</h2>
   <ul>
-    <li>A unit-test suite of 16 groups covers the pure logic (<code>js/logic.js</code>): rarity mapping for three data sources, trade and price verdicts, bundle math, bulk-add parsing, OCR code parsing, card matching, the trade suggester and the scanner memory. Open <code>tests/</code> in any browser.</li>
+    <li>A unit-test suite of 18 groups covers the pure logic (<code>js/logic.js</code>): rarity mapping for three data sources, trade and price verdicts, bundle math, bulk-add parsing, OCR code parsing, card matching, the trade suggester and the scanner memory. Open <code>tests/</code> in any browser.</li>
     <li>End-to-end checks in headless Edge at phone size covered the first-run tour, sample data with live prices, price history, trade flow, Scalper Shield, scanning and dark mode.</li>
   </ul>
 

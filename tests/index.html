@@ -162,6 +162,7 @@ test("scanner memory: a fix is remembered, by code (sure) or by name (a hint)", 
     LR.clearLearned();
     eq(LR.codeKeys({num: "025", total: "165"}), ["pk:25/165"]);
     eq(LR.codeKeys({opId: "OP01-120"}), ["op:OP01-120"]);
+    eq(LR.codeKeys({pic: "sv03.5-025"}), ["pic:sv03.5-025"]);   // fixes can be remembered by the picture match
     LR.remember({num: "160", total: "132", words: ["Mega Absol"]}, {src: "tcgdex", id: "x-180", name: "Mega Absol ex"});
     eq(LR.recall({num: "160", total: "132"}), {ref: {src: "tcgdex", id: "x-180"}, how: "you", strong: true});
     eq(LR.recall({words: ["Mega Absol"]}).strong, false);

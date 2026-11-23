@@ -18,6 +18,7 @@ export function codeKeys(p) {
   if (p.lorSet && p.lorNum) k.push("lor:" + p.lorSet + "/" + p.lorNum);
   if (p.num && p.total) k.push("pk:" + normNum(p.num) + "/" + normNum(p.total));
   if (p.pkCode) k.push("pkc:" + p.pkCode.pre + normNum(p.pkCode.n));
+  if (p.pic) k.push("pic:" + p.pic);   // the picture matched this card (when the photo is sure, no text is read at all)
   return k;
 }
 /** A weak key comes from the name text. It only says "this card might be one of these". */

@@ -15,12 +15,12 @@ let layout = "1x1", game = "auto", rows = [], busy = false;
 export function openScan() {
   if (busy) { openSheet("m-scan"); return; }
   $("sc-setup").hidden = false; $("sc-run").hidden = true;
-  seg($("sc-layout"), [["1x1", "One card"], ["2x2", "4 cards"], ["3x3", "Binder page (9)"], ["3x4", "Binder page (12)"]], layout, v => { layout = v; openScanDraw(); });
+  seg($("sc-layout"), [["1x1", "One card"], ["3x3", "Several cards or a binder page"]], layout, v => { layout = v; openScanDraw(); });
   openScanDraw();
   openSheet("m-scan");
 }
 function openScanDraw() {
-  seg($("sc-layout"), [["1x1", "One card"], ["2x2", "4 cards"], ["3x3", "Binder page (9)"], ["3x4", "Binder page (12)"]], layout, v => { layout = v; openScanDraw(); });
+  seg($("sc-layout"), [["1x1", "One card"], ["3x3", "Several cards or a binder page"]], layout, v => { layout = v; openScanDraw(); });
   seg($("sc-game"), [["auto", "Figure it out"], ...Object.keys(GAMES).filter(g => S.games.includes(g)).map(g => [g, GAMES[g].name])], game, v => { game = v; openScanDraw(); });
 }
 const pickFile = cam => { const f = $("sc-file"); if (cam) f.setAttribute("capture", "environment"); else f.removeAttribute("capture"); f.click(); };
@@ -33,7 +33,7 @@ $("sc-file").addEventListener("change", async e => {
   busy = true; rows = [];
   $("sc-setup").hidden = true; $("sc-run").hidden = false; $("sc-rows").innerHTML = ""; $("sc-add").disabled = true;
   $("sc-bar").style.width = "3%";
-  $("sc-status").innerHTML = `<span class="spin"></span> Getting the scanner ready (the first time takes a few seconds)…`;
+  $("sc-status").innerHTML = `<span class="spin"></span> Getting the scanner ready… The first scan downloads the card finder and card list once (about 35 MB, so Wi-Fi is best). After that it works fast.`;
   const [r, c] = LAYOUTS[layout];
   try {
     await scanPhoto(file, [r, c], game, (i, total, res) => {
@@ -52,7 +52,7 @@ $("sc-file").addEventListener("change", async e => {
 function drawRows() {
   $("sc-rows").innerHTML = rows.map((row, i) => {
     const {res} = row;
-    const head = !res.candidates.length ? "Couldn't read this one." : res.remembered === "you" ? "Remembered from your fix ✓" : res.remembered ? "Fixed by a checked report ✓" : res.exact ? "Found it by the card code ✓" : "Not sure. Tap the right card (or Search)";
+    const head = !res.candidates.length ? "Couldn't read this one." : res.remembered === "you" ? "Remembered from your fix ✓" : res.remembered ? "Fixed by a checked report ✓" : res.exact ? ({both: "Found it: the picture and the printed text match ✓", picture: "Found it by the picture ✓"}[res.how] || "Found it by the card code ✓") : res.how === "disagree" ? "The picture and the number disagree. Tap the right card" : "Not sure. Tap the right card (or Search)";
     return `<div class="scanrow" data-r="${i}"><img src="${res.thumb}" alt="Scanned card ${i + 1}">
       <div><div class="note" style="margin-bottom:6px">${row.skip ? "Skipped" : esc(head)}</div>
       ${row.skip ? "" : `<div class="cands">${res.candidates.map((c, k) => `<button type="button" class="cand ${row.sel === k ? "on" : ""}" data-k="${k}" aria-pressed="${row.sel === k}">

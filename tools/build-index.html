@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Build the Pokémon picture list</title>
+<style>body{font:16px system-ui;max-width:640px;margin:2rem auto;padding:0 1rem}button{font-size:1rem;padding:.5rem 1rem}pre{white-space:pre-wrap}</style>
+<h1>Build the Pokémon picture list</h1>
+<p>Makes <code>data/pk-index.json</code> and <code>data/pk-index.bin</code>, the colour fingerprints the scanner compares photos with.
+"Add new cards" keeps the current list and only adds cards it doesn't have yet (run it after a new set comes out).
+Serve the project folder (for example <code>npx serve</code>), open this page, press a button, then put the two downloaded files in <code>data/</code>.</p>
+<p><button id="add">Add new cards</button> <button id="all">Rebuild everything</button></p>
+<pre id="log"></pre>
+<script type="module">
+import { grid, ART } from "../js/vision.js";
+const log = t => document.getElementById("log").textContent = t;
+const img = src => new Promise((res, rej) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = () => rej(src); i.src = src; });
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const SCALE = 600, POCKET = /^(A\d|P-A|B\d)/;   // TCG Pocket is a phone game, not printed cards
+
+async function build(append) {
+  let prev = null, prevBin = null;
+  if (append) { prev = await (await fetch("../data/pk-index.json", {cache: "no-cache"})).json(); prevBin = new Int8Array(await (await fetch("../data/pk-index.bin", {cache: "no-cache"})).arrayBuffer()); }
+  const [dg, da] = prev ? prev.dims : [576, 576], D = dg + da, have = new Set(prev ? prev.cards.map(c => c[0]) : []);
+  log("Reading the set lists…");
+  const sets = await (await fetch("https://api.tcgdex.net/v2/en/sets")).json(), list = [];
+  for (const s of sets) {
+    if (POCKET.test(s.id)) continue;
+    try { const d = await (await fetch("https://api.tcgdex.net/v2/en/sets/" + encodeURIComponent(s.id))).json(); for (const c of d.cards || []) if (c.image && !have.has(c.id)) list.push(c); } catch (e) {}
+    await wait(50);
+  }
+  const buf = new Int8Array(list.length * D), ok = new Uint8Array(list.length); let next = 0, done = 0;
+  const q8 = (arr, off) => { for (let i = 0; i < arr.length; i++) buf[off + i] = Math.max(-127, Math.min(127, Math.round(arr[i] * SCALE))); };
+  async function worker() {
+    while (next < list.length) {
+      const i = next++, c = list[i]; let im = null;
+      for (let t = 0; t < 8 && !im; t++) { try { im = await img(c.image + "/low.webp" + (t ? "?r=" + t : "")); } catch (e) { await wait(1500 * (t + 1)); } }   // the picture server slows down busy visitors
+      if (!im) continue;
+      q8(grid(im, 12, 16), i * D); if (da) q8(grid(im, 16, 12, ...ART), i * D + dg); ok[i] = 1;
+      log(`Pictures: ${++done} of ${list.length}`);
+    }
+  }
+  await Promise.all(Array.from({length: 3}, worker));
+  const keep = list.map((c, i) => i).filter(i => ok[i]), out = new Int8Array((prev ? prev.cards.length : 0) * D + keep.length * D);
+  if (prevBin) out.set(prevBin);
+  keep.forEach((i, j) => out.set(buf.subarray(i * D, (i + 1) * D), (prev ? prev.cards.length : 0) * D + j * D));
+  const cards = [...(prev ? prev.cards : []), ...keep.map(i => [list[i].id, list[i].name, list[i].localId])];
+  const save = (name, data, type) => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data], {type})); a.download = name; a.click(); };
+  save("pk-index.bin", out, "application/octet-stream");
+  save("pk-index.json", JSON.stringify({v: 1, built: new Date().toISOString().slice(0, 10), dims: [dg, da], scale: SCALE, cards}), "application/json");
+  log(`Done: ${cards.length} cards (${keep.length} new, ${list.length - keep.length} pictures didn't load; run "Add new cards" again to retry those).`);
+}
+document.getElementById("add").onclick = () => build(true).catch(e => log("Stopped: " + e.message));
+document.getElementById("all").onclick = () => build(false).catch(e => log("Stopped: " + e.message));
+</script>
+</html>

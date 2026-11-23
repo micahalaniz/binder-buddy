@@ -6,6 +6,7 @@ import { parseCardText, normNum, numKey, nameMatch } from "./logic.js";
 import { search, card, onePieceByCode, lorcanaBySetNum, pokemonSetsFor, pokemonSetCards, ygoByCode } from "./catalog.js";
 import { loadImg } from "./util.js";
 import { recall } from "./learn.js";
+import { findCards, matchCard } from "./vision.js";
 
 const TESS = "https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js";
 let workerP = null;
@@ -153,14 +154,119 @@ async function rankByLook(im, x, y, w, h, cands) {
   return scored.sort((p, q) => (p.d - q.d) || (p.i - q.i)).map(s => s.c);
 }
 
+// ------------------------------------------------------------------ the scanner: picture match + text check
+// 1. Find each card in the photo and straighten it (vision.js).
+// 2. Picture match: compare it with every card's official picture → the closest cards.
+// 3. Text check: read the card number and name from the straightened card (much easier than from the raw photo).
+// 4. Decide: both agree → found. Same artwork printed in several sets → the number decides.
+//    They disagree or neither is sure → you pick, with the likeliest cards first.
+// How far the best picture match must stand out. Measured on 300+ test photos: wrong matches scored up to about 10, so a
+// picture alone only decides at 15+. Below that, the name or number read off the card has to agree.
+const STAND_OK = 4.5, STAND_SKIP_TEXT = 15;
+// Reprints with the same artwork score within about .03 of each other on a clean picture (a different card is ~.5 lower),
+// but blur can widen that, so anything with the same name within .2 counts as "same artwork": the number decides.
+const TWIN = .2;
+
+/** Shrink a photo so its long side is at most `max` pixels (phones take 12+ megapixel photos). */
+function shrink(im, max = 2000) {
+  const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement("canvas");
+  c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+  return c;
+}
+const thumbOf = (cnv, size = 160) => { const t = document.createElement("canvas"), k = size / Math.max(cnv.width, cnv.height); t.width = Math.round(cnv.width * k); t.height = Math.round(cnv.height * k); t.getContext("2d").drawImage(cnv, 0, 0, t.width, t.height); return t.toDataURL("image/jpeg", 0.7); };
+const pkIdOf = c => c && c.src === "tcgdex" ? c.id : null;
+
+/** Combine the picture match (vm) with the text check (ocr) for one card. */
+export async function decide(vm, ocr) {
+  const list = (vm && vm.list) || [], o = (ocr && ocr.candidates) || [];
+  const vIds = list.map(x => x.id);
+  const get = async ids => (await Promise.all(ids.map(id => card("tcgdex", id).catch(() => null)))).filter(Boolean);
+  // the picture's best match is kept with what was read, so a fix can be remembered even when no text was read
+  const pic = vm && vm.list[0] && vm.stand >= STAND_OK ? vm.list[0].id : null;
+  const res = {parsed: {...(ocr ? ocr.parsed : {}), ...(pic ? {pic} : {})}, remembered: ocr && ocr.remembered, how: ""};
+  const uniq = arr => { const s = new Set(); return arr.filter(c => c && !s.has(c.src + c.id) && s.add(c.src + c.id)); };
+  // A fix you (or a checked report) made before always wins
+  if (ocr && ocr.remembered) return {...res, candidates: ocr.candidates, exact: ocr.exact, how: "remembered"};
+  const fix = pic && !(ocr && ocr.exact) && recall({pic});   // a clearly read code beats a fix remembered by picture
+  if (fix) { const c = await card(fix.ref.src, fix.ref.id).catch(() => null); if (c) return {...res, candidates: uniq([c, ...await get(vIds.slice(0, 3))]), exact: true, remembered: fix.how, how: "remembered"}; }
+  // Not a Pokémon card (One Piece, Lorcana, Yu-Gi-Oh! codes are exact): trust the code
+  if (ocr && ocr.exact && o[0] && o[0].src !== "tcgdex") return {...res, candidates: o, exact: true, how: "code"};
+  const stand = vm ? vm.stand : 0, top = list[0];
+  if (ocr && ocr.exact && o[0]) {
+    const oid = pkIdOf(o[0]);
+    // the number and the picture agree (same card, or a reprint with the same artwork)
+    if (vIds.slice(0, 8).includes(oid) || (top && top.name === o[0].name && stand >= STAND_OK)) return {...res, candidates: uniq([o[0], ...await get(vIds.slice(0, 3))]), exact: true, how: "both"};
+    // they disagree: show both, you pick
+    if (top && stand >= STAND_OK) return {...res, candidates: uniq([...await get([top.id]), o[0], ...await get(vIds.slice(1, 3)), ...o.slice(1, 3)]), exact: false, how: "disagree"};
+    return {...res, candidates: o, exact: true, how: "code"};
+  }
+  if (top && stand >= STAND_OK) {
+    // same artwork in several sets (reprints): if the number was read, it decides; otherwise you pick
+    const twins = list.filter(x => x.name === top.name && top.s - x.s < TWIN);
+    const num = ocr && ocr.parsed && (ocr.parsed.num || (ocr.parsed.pkCode && ocr.parsed.pkCode.pre + ocr.parsed.pkCode.n));
+    let pick = top;
+    if (twins.length > 1 && num) pick = twins.find(x => normNum(x.num) === normNum(num) || numKey(x.num) === numKey(num)) || top;
+    const cands = await get([pick.id, ...vIds.filter(id => id !== pick.id).slice(0, 4)]);
+    // which reprint it is must be settled: only one with this artwork, or the number picked one
+    const settled = twins.length === 1 || (!!num && (normNum(pick.num) === normNum(num) || numKey(pick.num) === numKey(num)));
+    // the text agrees: the number matches, or the name was read on the card
+    const textAgrees = (!!num && (normNum(pick.num) === normNum(num) || numKey(pick.num) === numKey(num))) || !!(ocr && ocr.parsed && nameMatch(top.name, ocr.parsed.words || []));
+    const sure = settled && (stand >= STAND_SKIP_TEXT || textAgrees);
+    return {...res, candidates: uniq([...cands, ...o.slice(0, 2)]), exact: sure, how: textAgrees ? "both" : "picture"};
+  }
+  // nobody is sure: picture matches first, then text matches
+  return {...res, candidates: uniq([...await get(vIds.slice(0, 4)), ...o.slice(0, 4)]).slice(0, 8), exact: false, how: "unsure"};
+}
+
 /**
- * Scan a photo. layout = [rows, cols]: [1,1] for one card, [3,3] for a 9-pocket binder page, [3,4] for 12-pocket.
- * onCell(index, total, result) is called as each pocket finishes.
+ * Scan a photo. layout = [rows, cols]: [1,1] for one card, otherwise a binder page (cards are found
+ * automatically; the layout is only used if they can't be). onCell(index, total, result) after each card.
  */
 export async function scanPhoto(blob, layout, gameHint, onCell = () => {}) {
-  const [rows, cols] = layout;
-  const im = await loadImg(blob);
+  const im = shrink(await loadImg(blob));
   const worker = await getWorker();
+  const usePicture = gameHint === "auto" || gameHint === "pokemon";
+  let found = null;
+  if (usePicture) {
+    try {
+      const one = layout[0] * layout[1] === 1;
+      const page = await findCards(im, false);
+      // "one card" picked, but the photo is clearly a binder page: scan every card
+      found = !one || page.length >= 3 ? (page.length ? page.map(p => [p]) : null) : [await findCards(im, true)];
+    } catch (e) { found = null; }   // no internet for the card finder, or it failed: read the text the old way
+  }
+  if (!found || !found.length) return scanGrid(im, layout, gameHint, onCell, worker);
+  const results = [];
+  for (let i = 0; i < found.length; i++) {
+    let res;
+    try {
+      let vm = null; try { vm = await matchCard("pokemon", found[i]); } catch (e) {}
+      const chosen = vm ? vm.found : found[i][0];
+      const big = chosen.big, top = vm && vm.list[0];
+      // Very sure picture match, and no other printing shares the artwork: no need for the slow text check
+      const twins = vm ? vm.list.filter(x => top && x.name === top.name && top.s - x.s < TWIN).length : 0;
+      let text = "", ocr = null;
+      if (!(vm && vm.stand >= STAND_SKIP_TEXT && twins === 1)) {
+        text = await readCell(worker, big, 0, 0, big.width, big.height);
+        ocr = {...await identify(text, gameHint), text};
+        // the picture match isn't sure (maybe it isn't a Pokémon card): also read the whole photo the old way
+        if ((!vm || vm.stand < STAND_OK) && !ocr.exact && found.length === 1) {
+          const t2 = await readCell(worker, im, 0, 0, im.width, im.height), o2 = {...await identify(t2, gameHint), text: t2};
+          if (o2.exact || o2.candidates.length > ocr.candidates.length) { ocr = o2; text = t2; }
+        }
+      }
+      res = {...await decide(vm, ocr), text, vision: vm ? {stand: +vm.stand.toFixed(2), top: vm.list.slice(0, 3).map(x => x.id)} : null};
+      res.thumb = thumbOf(chosen.canvas);
+    } catch (e) { res = {parsed: {}, candidates: [], text: "", error: e.message, thumb: thumbOf(found[i][0].canvas)}; }
+    results.push(res);
+    onCell(i, found.length, res);
+  }
+  return results;
+}
+
+/** The old way: split the photo into pockets and read the text in each. Used when the cards can't be found. */
+async function scanGrid(im, layout, gameHint, onCell, worker) {
+  const [rows, cols] = layout;
   const cw = im.width / cols, ch = im.height / rows, total = rows * cols, results = [];
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
     const i = r * cols + c;
@@ -172,7 +278,6 @@ export async function scanPhoto(blob, layout, gameHint, onCell = () => {}) {
       if (!res.remembered) res.candidates = await rankByLook(im, x, y, w, h, res.candidates);   // a remembered fix stays first
     }
     catch (e) { res = {parsed: {}, candidates: [], text: "", error: e.message}; }
-    // a thumbnail of the pocket so you can see which card is which
     const t = document.createElement("canvas"), k = 160 / Math.max(w, h);
     t.width = Math.round(w * k); t.height = Math.round(h * k);
     t.getContext("2d").drawImage(im, x, y, w, h, 0, 0, t.width, t.height);

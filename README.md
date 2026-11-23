@@ -23,7 +23,7 @@ Collection apps charge a monthly subscription for the features collectors need m
 
 | | |
 |---|---|
-| 📷 **Scanner** | Photograph one card or a whole 9- or 12-pocket binder page. On-device OCR reads the printed card code (`238/191`, `TG05/TG30`, `SWSH050`, `OP01-120`, `207/204 • EN • 1`, `LOB-EN001`) and checks it against the card name it read. When it isn't sure, you pick. |
+| 📷 **Scanner** | Photograph one card or a whole binder page. Two checks run on your phone: **picture matching** (each card is found in the photo, straightened, and its colours compared with a fingerprint of every English Pokémon card) and **text reading** (the printed code like `238/191`, `TG05/TG30`, `OP01-120`, `LOB-EN001`). When both agree it's added. When they disagree or neither is sure, you pick. Built to cope with blurry, tilted and shiny photos. |
 | 🔍 **Every card** | Search shows every match. Type a name, add a set ("Charizard 151") or a number ("Pikachu 25"), or type the number printed on the card ("025/165"). Covers secret rares (`199/165`), promos (`SWSH050`, `SM60`, `SVP 045`), Trainer Gallery, Galarian Gallery, Shiny Vault, Radiant Collection and other special subsets. |
 | 📖 **Card info** | HP, attacks, abilities, card text, artist, tournament legality, which versions were printed, and whether it's a secret rare or special subset. Works for all five games. |
 | 💵 **Live prices** | Linked cards update once a day from free community databases (TCGplayer market prices). |
@@ -49,6 +49,7 @@ Collection apps charge a monthly subscription for the features collectors need m
 - **No backend at all.** It's a static site on GitHub Pages, so hosting costs $0 and there's no server to leak data from.
 - **Local-first:** cards, photos (as compressed JPEG blobs), the wishlist and price logs live in **IndexedDB**. Settings and value history live in `localStorage`.
 - **Open data:** [TCGdex](https://tcgdex.dev) (Pokémon), [Lorcast](https://lorcast.com) (Lorcana) and [OPTCG API](https://optcgapi.com) (One Piece) and [Scryfall](https://scryfall.com) (Magic; card images © Wizards of the Coast, shown unaltered per Scryfall's guidelines) and [YGOPRODeck](https://ygoprodeck.com) (Yu-Gi-Oh!, priced per printing; no official pictures because YGOPRODeck asks apps not to hotlink them). All are free, keyless and CORS-enabled. Results are normalized into one card shape (`js/catalog.js`), cached in IndexedDB, and rate-limited politely (Lorcast asks for 50–100 ms between calls).
+- **Picture matching:** [OpenCV.js](https://opencv.org) (Apache-2.0) finds each card's four corners and straightens it. A box that holds other boxes is treated as the binder page, not a card. A small colour grid of the whole card plus its art box is compared with `data/pk-index.bin`, a fingerprint of every English Pokémon card built from TCGdex pictures. A quick pass narrows the list to 300 cards. A careful pass then tries small shifts and zooms while ignoring glare, and a "stands out" score says how sure it is. Same-art reprints are told apart by the printed number. It downloads once, then works offline.
 - **On-device OCR:** [Tesseract.js](https://github.com/naptha/tesseract.js) runs in a Web Worker and is lazy-loaded on the first scan. Each pocket is cropped, greyscaled and contrast-boosted. It reads the whole card, then zooms on the code strip and stops early once an exact code is found. Pokémon codes like `025/165` are matched by finding sets with 165 cards, then fetching card 025 in each.
 - **Charts** are hand-built SVG (no chart library) with a touch crosshair/tooltip and a screen-reader table.
 - **Vanilla JS, ES modules, no build step, no dependencies.**
@@ -59,7 +60,8 @@ css/app.css           themeable design system (CSS variables, light/dark)
 js/app.js             boot, tabs, daily auto price refresh
 js/logic.js           pure logic: rarities, verdicts, bundle math, OCR text parsing (unit tested)
 js/catalog.js         card databases → one shape; prices; history
-js/scan.js            OCR pipeline        js/scanui.js   scan → confirm → add
+js/scan.js            scan pipeline       js/scanui.js   scan → confirm → add
+js/vision.js          card finding + picture matching (data/pk-index.*)
 js/binder.js          binder list, details, edit, photos
 js/wishlist.js  js/trade.js  js/tradelink.js  js/pricecheck.js  js/share.js  js/more.js
 js/store.js           IndexedDB + settings      js/chart.js   SVG line chart
@@ -81,7 +83,7 @@ Free forever, every feature. No ads, no accounts, no tracking, no selling data. 
 
 ## Credits & legal
 
-Card data and prices: TCGdex, Lorcast, OPTCG API. OCR: Tesseract.js (Apache-2.0). Fonts: Fredoka and Nunito (SIL OFL).
+Card data and prices: TCGdex, Lorcast, OPTCG API. OCR: Tesseract.js (Apache-2.0). Card finding: OpenCV.js (Apache-2.0). Picture fingerprints are built from TCGdex card images. Fonts: Fredoka and Nunito (SIL OFL).
 Not affiliated with or endorsed by The Pokémon Company, Nintendo, Bandai, Disney, Ravensburger or TCGplayer. Card names and images belong to their owners. Prices are estimates, not offers.
 
 Code © 2026 Micah Alaniz / Sweet Onion Studios, MIT licensed.
