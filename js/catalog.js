@@ -66,21 +66,65 @@ export async function pokemonSetsByTotal(total) {
   return [...sets.values()].filter(s => +s.official === t).sort((a, b) => b.order - a.order);
 }
 
-async function searchPokemon(q, num) {
-  const sets = await pokemonSets();
-  const list = await getJSON(`${TCGDEX}/cards?name=${encodeURIComponent(q)}&pagination:itemsPerPage=120`) || [];
-  return list.filter(c => sets.has(pkSetOf(c.id)))
-    .filter(c => !num || normNum(c.localId) === normNum(num))
-    .map(c => {
-      const s = sets.get(pkSetOf(c.id));
-      return {game: "pokemon", src: "tcgdex", id: c.id, name: c.name, set: s.name, order: s.order,
-        num: c.localId + (s.official ? "/" + String(s.official).padStart(String(c.localId).length, "0") : ""),
-        img: c.image ? c.image + "/low.webp" : "", imgLg: c.image ? c.image + "/high.webp" : "", partial: true};
-    })
-    .sort((a, b) => b.order - a.order)
-    .slice(0, 60);
+// Name lists are kept for a few minutes so typing "Pikachu", "Pikachu 1", "Pikachu 151" asks the database once.
+const pkNameCache = new Map();
+function pkByName(name) {
+  const k = name.toLowerCase();
+  if (!pkNameCache.has(k)) {
+    pkNameCache.set(k, getJSON(`${TCGDEX}/cards?name=${encodeURIComponent(name)}&pagination:itemsPerPage=1000`).then(l => l || []).catch(e => { pkNameCache.delete(k); throw e; }));
+    setTimeout(() => pkNameCache.delete(k), 10 * 60 * 1000);
+  }
+  return pkNameCache.get(k);
 }
-
+function pkShape(c, s) {
+  const official = s && s.official;
+  return {game: "pokemon", src: "tcgdex", id: c.id, name: c.name, set: s ? s.name : pkSetOf(c.id), order: s ? s.order : 1e6,
+    num: c.localId + (official ? "/" + String(official).padStart(String(c.localId).length, "0") : ""),
+    img: c.image ? c.image + "/low.webp" : "", imgLg: c.image ? c.image + "/high.webp" : "", partial: true};
+}
+/**
+ * Pokémon search. Understands: "Pikachu", "Pikachu 25", "Pikachu 025/165", "Charizard 151" (set),
+ * "Umbreon ex Prismatic", "025/165" (just the number printed on the card). Shows every match, newest first.
+ */
+async function searchPokemon(text) {
+  let sets = await pokemonSets();
+  const code = text.match(/^#?([a-z]{0,3}\d{1,3})\s*\/\s*([a-z]{0,3}\d{2,3})$/i);
+  if (code) {
+    const ss = await pokemonSetsByTotal(code[2]);
+    const found = await Promise.all(ss.slice(0, 20).map(s => pokemonSetCards(s.id).then(l => l.filter(c => normNum(c.localId) === normNum(code[1])).map(c => pkShape(c, s))).catch(() => [])));
+    return found.flat();
+  }
+  const tokens = text.split(/\s+/).filter(Boolean);
+  let fallback = null;
+  for (let k = tokens.length; k >= 1; k--) {
+    const name = tokens.slice(0, k).join(" "), rest = tokens.slice(k);
+    if (name.length < 2) continue;
+    let list = await pkByName(name);
+    if (!list.length) continue;
+    // a brand-new set this device hasn't heard of yet: get the set list again (once)
+    list = list.filter(c => !POCKET.test(pkSetOf(c.id)));
+    if (!pkFresh && list.some(c => !sets.has(pkSetOf(c.id)))) { pkFresh = true; pkSets = null; await cacheSet("pk-sets", null); sets = await pokemonSets(); }
+    const all = list.map(c => pkShape(c, sets.get(pkSetOf(c.id))));
+    fallback = fallback || all;
+    if (!rest.length) return sortPk(all);
+    // every extra word must match the card number ("25", "025/165") or the set ("151", "Prismatic")
+    const ok = (r, t) => {
+      const [n, tot] = t.replace(/^#/, "").split("/"), [rn, rt] = String(r.num).split("/");
+      if (/\d/.test(n) && normNum(n) === normNum(rn) && (!tot || normNum(tot) === normNum(rt))) return true;
+      const st = (r.set + " " + pkSetOf(r.id)).toLowerCase();
+      return st.includes(t.toLowerCase());
+    };
+    const hits = all.filter(r => rest.every(t => ok(r, t)));
+    if (hits.length) {
+      const exactNum = r => rest.some(t => normNum(t.split("/")[0]) === normNum(String(r.num).split("/")[0])) ? 0 : 1;
+      return sortPk(hits).sort((a, b) => exactNum(a) - exactNum(b));
+    }
+  }
+  return fallback ? sortPk(fallback) : [];
+}
+let pkFresh = false;
+const POCKET = /^(A\d|P-A|B\d)/;   // TCG Pocket is a phone game, not printed cards
+const sortPk = l => l.sort((a, b) => b.order - a.order).slice(0, 400);
 async function pokemonCard(id) {
   const c = await getJSON(`${TCGDEX}/cards/${encodeURIComponent(id)}`);
   if (!c) return null;
@@ -276,7 +320,7 @@ export async function search(game, text) {
   const m = t.match(/^(.*?)(?:\s+#?([a-z]{0,3}\d{1,3})(?:\s*\/\s*[a-z]{0,3}\d{1,3})?)?$/i);
   const name = (m && m[1] || t).trim(), num = m && m[2];
   if (!name) return [];
-  return game === "lorcana" ? searchLorcana(name, num) : game === "mtg" ? searchMagic(name, num) : searchPokemon(name, num);
+  return game === "lorcana" ? searchLorcana(name, num) : game === "mtg" ? searchMagic(name, num) : searchPokemon(t);
 }
 
 /** Full details + prices for one card. */

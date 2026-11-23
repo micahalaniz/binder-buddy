@@ -26,7 +26,7 @@ function drawGames() {
   seg($("pk-game"), Object.keys(GAMES).filter(g => S.games.includes(g) || g === game).map(g => [g, GAMES[g].name]), game, v => {
     game = v; drawGames(); if ($("pk-q").value.trim()) run();
   });
-  $("pk-hint").textContent = {pokemon: 'Try "Pikachu ex 238" or "Charizard 151".', onepiece: 'Try "Shanks", "Luffy" or a code like "OP01-120".', lorcana: 'Try "Elsa", "Stitch" or "Mickey Mouse 207".'}[game];
+  $("pk-hint").textContent = {pokemon: 'Try "Pikachu", "Pikachu 25", "Charizard 151" (set) or the number on the card, like "025/165".', onepiece: 'Try "Shanks", "Luffy" or a code like "OP01-120".', lorcana: 'Try "Elsa", "Stitch" or "Mickey Mouse 207".'}[game];
 }
 
 async function run() {
@@ -37,7 +37,7 @@ async function run() {
     results = await search(game, q);
     if (my !== token) return;
     if (!results.length) { $("pk-out").innerHTML = `<p class="note">No cards found for "${esc(q)}". Check the spelling, try just the name, or type it in yourself.</p>`; return; }
-    $("pk-out").innerHTML = `<p class="note">${results.length === 60 ? "Showing the first 60. Add the card number to narrow it down." : results.length + " found. Tap yours."}</p><div class="results">` +
+    $("pk-out").innerHTML = `<p class="note">${results.length >= 60 ? results.length + " found. Add the card number or set to narrow it down (like \"Pikachu 25\" or \"Pikachu 151\")." : results.length + " found. Tap yours."}</p><div class="results">` +
       results.map((r, i) => `<button class="res" data-i="${i}" type="button">
         ${r.img ? `<img src="${esc(r.img)}" alt="" loading="lazy">` : `<div class="nopic"></div>`}
         <b>${esc(r.name)}</b><span>${esc(r.set)}${r.num ? " · " + esc(r.num) : ""}</span>${r.market != null ? `<span>${money(r.market)}</span>` : ""}</button>`).join("") + `</div>`;
