@@ -8,15 +8,16 @@ import { money, emit, VERSION } from "./ui.js";
 import { remember, scanReport } from "./learn.js";
 import { openPicker } from "./picker.js";
 import { linkFields, saveCard } from "./binder.js";
+import { logScan, logRows, savedCount, sendSaved, clearSaved } from "./trainlog.js";
 
 const LAYOUTS = {"1x1": [1, 1], "2x2": [2, 2], "3x3": [3, 3], "3x4": [3, 4]};
-let layout = "1x1", game = "auto", rows = [], busy = false;
+let layout = "1x1", game = "auto", rows = [], busy = false, logId = null;
 
 export function openScan() {
   if (busy) { openSheet("m-scan"); return; }
   $("sc-setup").hidden = false; $("sc-run").hidden = true;
   seg($("sc-layout"), [["1x1", "One card"], ["3x3", "Several cards or a binder page"]], layout, v => { layout = v; openScanDraw(); });
-  openScanDraw();
+  openScanDraw(); drawTeach();
   openSheet("m-scan");
 }
 function openScanDraw() {
@@ -26,11 +27,26 @@ function openScanDraw() {
 const pickFile = cam => { const f = $("sc-file"); if (cam) f.setAttribute("capture", "environment"); else f.removeAttribute("capture"); f.click(); };
 $("sc-gallery").onclick = () => pickFile(false);
 $("sc-camera").onclick = () => pickFile(true);
-$("sc-again").onclick = () => { if (!busy) { $("sc-setup").hidden = false; $("sc-run").hidden = true; } };
+$("sc-again").onclick = () => { if (!busy) { $("sc-setup").hidden = false; $("sc-run").hidden = true; drawTeach(); } };
+// Saved scans: send them to the builder so mistakes can be studied and fixed.
+async function drawTeach() {
+  const n = await savedCount();
+  $("sc-teach").innerHTML = n ? `📦 <b>${n}</b> scan${n === 1 ? "" : "s"} saved on this phone to help fix the scanner. Pick the right card on every scan (use Search if it's not listed), then send them.
+    <div class="acts" style="justify-content:flex-start;margin-top:6px"><button class="btn ghost small" data-t="send">📤 Send scans to the builder</button><button class="btn ghost small" data-t="clear">Clear</button></div>` : "";
+}
+$("sc-teach").addEventListener("click", async e => {
+  const b = e.target.closest("[data-t]"); if (!b) return;
+  if (b.dataset.t === "clear") { if (confirm("Delete the saved scans from this phone?")) { await clearSaved(); drawTeach(); } return; }
+  b.disabled = true;
+  const how = await sendSaved(VERSION);
+  b.disabled = false;
+  toast({shared: "Sent! Thanks, every scan helps.", downloaded: "Saved the file. Send it to the builder.", none: "No saved scans yet."}[how] || "Not sent.", 4000);
+});
 
 $("sc-file").addEventListener("change", async e => {
   const file = e.target.files[0]; e.target.value = ""; if (!file) return;
-  busy = true; rows = [];
+  busy = true; rows = []; logId = null;
+  const logging = logScan(file, {layout, game, version: VERSION}).then(id => { logId = id; logRows(logId, rows); });
   $("sc-setup").hidden = true; $("sc-run").hidden = false; $("sc-rows").innerHTML = ""; $("sc-add").disabled = true;
   $("sc-bar").style.width = "3%";
   $("sc-status").innerHTML = `<span class="spin"></span> Getting the scanner ready… The first scan downloads the card finder and card list once (about 35 MB, so Wi-Fi is best). After that it works fast.`;
@@ -46,7 +62,7 @@ $("sc-file").addEventListener("change", async e => {
     $("sc-status").textContent = err.message || "Scanning didn't work. Check your internet (the scanner downloads once) and try again.";
   }
   busy = false;
-  drawRows();
+  drawRows(); await logging;
 });
 
 function drawRows() {
@@ -59,6 +75,7 @@ function drawRows() {
         ${c.img ? `<img src="${esc(c.img)}" alt="" loading="lazy">` : ""}${esc(c.name)}<br><span class="muted">${esc(c.set || "")} ${esc(c.num || "")}</span>${c.market != null ? `<br>${money(c.market)}` : ""}</button>`).join("")}</div>`}
       <div class="acts" style="justify-content:flex-start;margin-top:6px"><button class="btn ghost small" data-a="search">🔎 Not right? Search</button><button class="btn ghost small" data-a="skip">${row.skip ? "Undo skip" : "Skip"}</button><button class="btn ghost small" data-a="report" title="Tell us what went wrong so the scanner gets smarter for everyone">🚩 Report</button></div></div></div>`;
   }).join("");
+  logRows(logId, rows);
   const n = rows.filter(r => !r.skip && r.sel >= 0).length;
   $("sc-add").disabled = !n || busy;
   $("sc-add").textContent = n ? `Add ${n} card${n > 1 ? "s" : ""} to binder` : "Add to binder";

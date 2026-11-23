@@ -3,7 +3,7 @@ import { GAMES, rarLevel } from "./logic.js";
 import { S, photoURL } from "./store.js";
 import { $, esc, mix, lum } from "./util.js";
 
-export const VERSION = "2.7.0";
+export const VERSION = "2.7.1";
 
 // tiny event bus: screens tell each other when data changes
 const subs = {};

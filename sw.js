@@ -1,10 +1,10 @@
 // Offline support. App files: network first, then cache (so updates show up right away).
 // Card pictures from the card databases: cache first (they never change).
 // Price and search requests are never cached here; the app caches them itself in IndexedDB.
-const CACHE = "binder-buddy-v2.7.0", IMAGES = "binder-buddy-img-v1";
+const CACHE = "binder-buddy-v2.7.1", IMAGES = "binder-buddy-img-v1";
 const SHELL = ["./", "index.html", "css/app.css", "manifest.webmanifest", "icon-192.png", "icon-512.png", "fonts/fredoka.woff2", "fonts/nunito.woff2",
   "js/app.js", "js/util.js", "js/logic.js", "js/store.js", "js/ui.js", "js/catalog.js", "js/chart.js", "js/picker.js", "js/binder.js",
-  "js/wishlist.js", "js/trade.js", "js/pricecheck.js", "js/scan.js", "js/scanui.js", "js/share.js", "js/more.js", "js/tradelink.js", "js/learn.js", "js/fixes.js", "js/vendor/qrcode.js", "js/sets.js", "js/cardinfo.js", "js/vision.js", "js/alerts.js", "js/care.js"];
+  "js/wishlist.js", "js/trade.js", "js/pricecheck.js", "js/scan.js", "js/scanui.js", "js/share.js", "js/more.js", "js/tradelink.js", "js/learn.js", "js/fixes.js", "js/vendor/qrcode.js", "js/sets.js", "js/cardinfo.js", "js/vision.js", "js/trainlog.js", "js/alerts.js", "js/care.js"];
 const IMG_HOSTS = ["assets.tcgdex.net", "cards.lorcast.io", "optcgapi.com", "cards.scryfall.io"];
 
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
