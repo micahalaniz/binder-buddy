@@ -299,7 +299,8 @@ export async function findCards(image, one) {
       const rowH = keep.length ? Math.sqrt(keep[0].area) * Math.max(src.cols, src.rows) * .5 : 1;
       keep.sort((a, b) => Math.round(center(a)[1] / rowH) - Math.round(center(b)[1] / rowH) || center(a)[0] - center(b)[0]);
     }
-    return keep.map(q => ({...straighten(cv, src, q.pts), at: center(q), whole: !!q.whole, inner: !!q.inner, filled: !!q.filled, area: q.area}));
+    const ratio = q => { const w = (dist(q.pts[0], q.pts[1]) + dist(q.pts[3], q.pts[2])) / 2, h = (dist(q.pts[0], q.pts[3]) + dist(q.pts[1], q.pts[2])) / 2; return Math.min(w, h) / Math.max(w, h); };
+    return keep.map(q => ({...straighten(cv, src, q.pts), at: center(q), whole: !!q.whole, inner: !!q.inner, filled: !!q.filled, area: q.area, ratio: ratio(q)}));
   } finally { src.delete(); }
 }
 

@@ -8,7 +8,7 @@ import { money } from "./ui.js";
 let opts = null, game = "pokemon", token = 0, results = [];
 
 /**
- * @param {{title?:string, game?:string, onPick:(card)=>void, onManual?:(game:string, text:string)=>void, manualLabel?:string}} o
+ * @param {{title?:string, game?:string, text?:string, prefer?:string[], onPick:(card)=>void, onManual?:(game:string, text:string)=>void, manualLabel?:string}} o
  */
 export function openPicker(o) {
   opts = o;
@@ -35,12 +35,18 @@ async function run() {
   $("pk-out").innerHTML = `<p class="note"><span class="spin"></span> Searching ${esc(GAMES[game].name)} cards…</p>`;
   try {
     results = await search(game, q);
+    let wide = false;
+    // nothing for "Name 123" (the number may be misread): show every card with that name instead
+    if (!results.length && /\s\S*\d\S*$/.test(q)) { results = await search(game, q.replace(/\s\S*\d\S*$/, "")); wide = results.length > 0; }
     if (my !== token) return;
+    // cards that look like the scanned photo go first
+    const pref = (opts && opts.prefer) || [], rank = r => { const i = pref.indexOf(r.id); return i < 0 ? 999 : i; };
+    if (pref.length) results = results.map((r, i) => [r, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]);
     if (!results.length) { $("pk-out").innerHTML = `<p class="note">No cards found for "${esc(q)}". Check the spelling, try just the name, or type it in yourself.</p>`; return; }
-    $("pk-out").innerHTML = `<p class="note">${results.length >= 60 ? results.length + " found. Add the card number or set to narrow it down (like \"Pikachu 25\" or \"Pikachu 151\")." : results.length + " found. Tap yours."}</p><div class="results">` +
+    $("pk-out").innerHTML = `<p class="note">${wide ? "No card with that number, so here are all of them. " : ""}${results.length >= 60 ? results.length + " found. Add the card number or set to narrow it down (like \"Pikachu 25\" or \"Pikachu 151\")." : results.length + " found. Tap yours."}</p><div class="results">` +
       results.map((r, i) => `<button class="res" data-i="${i}" type="button">
         ${r.img ? `<img src="${esc(r.img)}" alt="" loading="lazy">` : `<div class="nopic"></div>`}
-        <b>${esc(r.name)}</b><span>${esc(r.set)}${r.num ? " · " + esc(r.num) : ""}</span>${r.market != null ? `<span>${money(r.market)}</span>` : ""}</button>`).join("") + `</div>`;
+        ${(opts && opts.prefer || []).includes(r.id) ? `<span class="muted">📷 Looks like your photo</span>` : ""}<b>${esc(r.name)}</b><span>${esc(r.set)}${r.num ? " · " + esc(r.num) : ""}</span>${r.market != null ? `<span>${money(r.market)}</span>` : ""}</button>`).join("") + `</div>`;
   } catch (e) {
     if (my === token) $("pk-out").innerHTML = `<p class="note">Couldn't reach the card database. Check your internet and try again, or type the card in yourself.</p>`;
   }

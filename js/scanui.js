@@ -92,9 +92,15 @@ $("sc-rows").addEventListener("click", e => {
     window.open(scanReport(row.res, pick, VERSION), "_blank", "noopener");
     toast("Check the report, then press Submit. No photos are sent. Under 13? Ask a parent.", 6000);
   }
-  if (a.dataset.a === "search") openPicker({title: "Which card is it?", game: game !== "auto" ? game : undefined, onPick: r => {
+  if (a.dataset.a === "search") {
+    // start the search from what the scanner saw: its best name guess plus the number it read (or the words, if no name)
+    const res = row.res, top = res.candidates[0], p = res.parsed || {};
+    const num = p.num ? String(p.num).split("/")[0].replace(/^0+(?=\d)/, "") : "";
+    const text = top ? top.name + (num ? " " + num : "") : num || (p.words || []).filter(w => w.length > 2).slice(0, 2).join(" ");
+    const prefer = [...res.candidates.map(c => c.id), ...(res.vision ? res.vision.top : [])];
+    openPicker({title: "Which card is it?", game: game !== "auto" ? game : (top && top.game) || undefined, text, prefer, onPick: r => {
     row.res.candidates.unshift(r); row.sel = 0; row.skip = false; row.searched = true; drawRows(); openSheet("m-scan");
-  }});
+  }}); }
 });
 $("sc-add").onclick = async () => {
   $("sc-add").disabled = true;

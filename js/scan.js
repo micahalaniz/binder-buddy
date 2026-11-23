@@ -231,8 +231,11 @@ export async function scanPhoto(blob, layout, gameHint, onCell = () => {}) {
     try {
       const one = layout[0] * layout[1] === 1;
       const page = await findCards(im, false);
-      // "one card" picked, but the photo is clearly a binder page: scan every card
-      found = !one || page.length >= 3 ? (page.length ? page.map(p => [p]) : null) : [await findCards(im, true)];
+      // "One card" picked, but the photo clearly holds several cards (a binder page, or cards laid out on a table): scan every card.
+      // Two or more separate card-shaped outlines of about the same size, each a fair part of the photo, means several cards.
+      const cardish = page.filter(p => !p.filled && p.ratio > .6 && p.ratio < .82 && p.area > .02);
+      const areas = cardish.map(p => p.area), similar = cardish.length >= 2 && Math.max(...areas) < Math.min(...areas) * 1.8;
+      found = !one || page.length >= 3 || similar ? (page.length ? page.map(p => [p]) : null) : [await findCards(im, true)];
     } catch (e) { found = null; }   // no internet for the card finder, or it failed: read the text the old way
   }
   if (!found || !found.length) return scanGrid(im, layout, gameHint, onCell, worker);
